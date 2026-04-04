@@ -121,16 +121,18 @@ function renderProfiles() {
           <i class="fa-solid fa-xmark"></i>
         </button>
       </div>
-      <div class="form-group">
-        <label class="form-label">이름</label>
-        <input type="text" class="form-input" value="${escAttr(profile.name)}"
-          oninput="updateProfile(${profile.id}, 'name', this.value)" placeholder="인물 이름" />
-      </div>
-      <div class="form-group">
-        <label class="form-label">짧은 설명</label>
-        <input type="text" class="form-input" value="${escAttr(profile.desc)}" maxlength="30"
-          oninput="updateProfile(${profile.id}, 'desc', this.value)" placeholder="예: 주인공, 마법사" />
-        <div class="char-count" id="descCount-${profile.id}">${profile.desc.length}/30</div>
+      <div class="char-row">
+        <div class="form-group">
+          <label class="form-label">이름</label>
+          <input type="text" class="form-input" value="${escAttr(profile.name)}"
+            oninput="updateProfile(${profile.id}, 'name', this.value)" placeholder="인물 이름" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">짧은 설명</label>
+          <input type="text" class="form-input" value="${escAttr(profile.desc)}" maxlength="30"
+            oninput="updateProfile(${profile.id}, 'desc', this.value)" placeholder="예: 주인공" />
+          <div class="char-count" id="descCount-${profile.id}">${profile.desc.length}/30</div>
+        </div>
       </div>
       <div class="form-group">
         <label class="form-label">프로필 이미지</label>
@@ -589,7 +591,6 @@ function escAttr(str) {
     .replace(/>/g, '&gt;');
 }
 
-// Sanitize color values — only allow valid hex colors to be used in inline styles
 function sanitizeColor(color, fallback) {
   return /^#[0-9a-fA-F]{6}$/.test(String(color)) ? String(color) : fallback;
 }
