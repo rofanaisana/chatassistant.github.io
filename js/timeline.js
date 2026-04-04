@@ -2,6 +2,7 @@
 const state = {
   profiles: [],
   nodes: [],
+  relations: [], // { from: id, to: id, label: '' }
   nextProfileId: 1,
   nextNodeId: 1,
 };
@@ -39,13 +40,13 @@ function switchTab(tab) {
 
 // ===================== PROFILE MANAGEMENT =====================
 function addProfile() {
-  if (state.profiles.length >= 6) {
-    alert('인물은 최대 6인까지 추가할 수 있습니다.');
+  if (state.profiles.length >= 3) {
+    alert('인물은 최대 3인까지 추가할 수 있습니다.');
     return;
   }
   const id = state.nextProfileId++;
   state.profiles.push({ id, name: `인물 ${id}`, desc: '', imgUrl: '' });
-  // 새로 추가된 인물은 펼침 상태
+  rebuildRelations();
   renderProfiles();
   renderPreview();
   updateProfileBtn();
@@ -54,6 +55,7 @@ function addProfile() {
 function removeProfile(id) {
   state.profiles = state.profiles.filter(p => p.id !== id);
   collapsedProfiles.delete(id);
+  rebuildRelations();
   renderProfiles();
   renderPreview();
   updateProfileBtn();
@@ -74,7 +76,10 @@ function updateProfile(id, field, value) {
     if (field === 'desc') value = value.slice(0, 30);
     profile[field] = value;
     renderPreview();
-    if (field === 'name') renderProfiles();
+    if (field === 'name') {
+      renderProfiles();
+      renderRelationsUI();
+    }
     if (field === 'desc') {
       const counter = document.getElementById(`descCount-${id}`);
       if (counter) counter.textContent = `${value.length}/30`;
@@ -98,11 +103,71 @@ function removeProfileImage(id) {
   if (profile) { profile.imgUrl = ''; renderProfiles(); renderPreview(); }
 }
 
+// ===================== RELATION MANAGEMENT =====================
+function rebuildRelations() {
+  // 인물 쌍별로 관계를 관리 (기존 관계 보존)
+  const newRelations = [];
+  for (let i = 0; i < state.profiles.length; i++) {
+    for (let j = i + 1; j < state.profiles.length; j++) {
+      const a = state.profiles[i].id;
+      const b = state.profiles[j].id;
+      const existing = state.relations.find(r =>
+        (r.from === a && r.to === b) || (r.from === b && r.to === a)
+      );
+      newRelations.push({
+        from: a,
+        to: b,
+        label: existing ? existing.label : '',
+      });
+    }
+  }
+  state.relations = newRelations;
+}
+
+function updateRelation(fromId, toId, value) {
+  const rel = state.relations.find(r =>
+    (r.from === fromId && r.to === toId) || (r.from === toId && r.to === fromId)
+  );
+  if (rel) {
+    rel.label = value;
+    renderPreview();
+  }
+}
+
+function renderRelationsUI() {
+  const container = document.getElementById('relationsList');
+  if (!container) return;
+  if (state.profiles.length < 2) {
+    container.innerHTML = '<div class="text-muted">인물 2인 이상 추가시 관계를 설정할 수 있습니다.</div>';
+    return;
+  }
+  container.innerHTML = '';
+  state.relations.forEach(rel => {
+    const pFrom = state.profiles.find(p => p.id === rel.from);
+    const pTo = state.profiles.find(p => p.id === rel.to);
+    if (!pFrom || !pTo) return;
+    const row = document.createElement('div');
+    row.className = 'relation-row';
+    row.innerHTML = `
+      <span class="relation-pair">
+        <span class="relation-name">${esc(pFrom.name)}</span>
+        <i class="fa-solid fa-arrows-left-right" style="color:#aaa;font-size:0.75rem;"></i>
+        <span class="relation-name">${esc(pTo.name)}</span>
+      </span>
+      <input type="text" class="form-input" value="${escAttr(rel.label)}"
+        oninput="updateRelation(${rel.from}, ${rel.to}, this.value)"
+        placeholder="예: 연인, 라이벌, 형제" style="flex:1;" />
+    `;
+    container.appendChild(row);
+  });
+}
+
 function renderProfiles() {
   const list = document.getElementById('profileList');
   if (state.profiles.length === 0) {
     list.innerHTML = `<div class="text-muted" style="margin-bottom:0.8rem;">인물이 없습니다. 추가해 보세요.</div>`;
     updateProfileBtn();
+    renderRelationsUI();
     return;
   }
   list.innerHTML = '';
@@ -159,11 +224,12 @@ function renderProfiles() {
     list.appendChild(card);
   });
   updateProfileBtn();
+  renderRelationsUI();
 }
 
 function updateProfileBtn() {
   const btn = document.getElementById('addProfileBtn');
-  btn.disabled = state.profiles.length >= 6;
+  btn.disabled = state.profiles.length >= 3;
 }
 
 // ===================== NODE MANAGEMENT =====================
@@ -222,7 +288,7 @@ function updateNode(id, field, value) {
       }
     }
     if (field === 'centerSide') {
-      renderNodes(); // re-render to reflect UI change
+      renderNodes();
     }
     renderPreview();
   }
@@ -358,18 +424,61 @@ function renderPreview() {
 
 function renderProfilesPreview() {
   const row = document.getElementById('profilesRow');
-  if (state.profiles.length === 0) { row.innerHTML = ''; return; }
-  row.innerHTML = state.profiles.map((p, idx) => {
-    const avatarContent = p.imgUrl ? `<img src="${escAttr(p.imgUrl)}" />` : esc(p.name.charAt(0));
-    return `
-    <div class="profile-chip">
-      <div class="profile-avatar" style="background:${AVATAR_COLORS[idx % AVATAR_COLORS.length]}">${avatarContent}</div>
-      <div class="profile-info">
-        <strong>${esc(p.name)}</strong>
-        <span>${esc(p.desc)}</span>
+  if (state.profiles.length === 0) { row.innerHTML = ''; row.className = 'profiles-row'; return; }
+
+  row.className = 'profiles-row-v2';
+  let html = '';
+
+  state.profiles.forEach((p, idx) => {
+    // 인물 앞에 관계 화살표 삽입 (두 번째 인물부터)
+    if (idx > 0) {
+      const rel = state.relations.find(r =>
+        (r.from === state.profiles[idx - 1].id && r.to === p.id) ||
+        (r.from === p.id && r.to === state.profiles[idx - 1].id)
+      );
+      const label = rel && rel.label ? esc(rel.label) : '';
+      html += `
+        <div class="relation-arrow-block">
+          ${label ? `<span class="relation-label">${label}</span>` : ''}
+          <div class="relation-arrows">
+            <i class="fa-solid fa-arrow-left"></i>
+            <i class="fa-solid fa-arrow-right"></i>
+          </div>
+        </div>
+      `;
+    }
+
+    const avatarContent = p.imgUrl
+      ? `<img src="${escAttr(p.imgUrl)}" />`
+      : esc(p.name.charAt(0));
+    html += `
+      <div class="profile-chip-v2">
+        <div class="profile-avatar-v2" style="background:${AVATAR_COLORS[idx % AVATAR_COLORS.length]}">
+          ${avatarContent}
+        </div>
+        <span class="profile-name-v2">${esc(p.name)}</span>
       </div>
-    </div>`;
-  }).join('');
+    `;
+  });
+
+  // 3인일 때: 1-2 사이, 2-3 사이 관계는 위에서 처리됨
+  // 1-3 사이 관계가 있으면 아래에 별도 표시
+  if (state.profiles.length === 3) {
+    const rel13 = state.relations.find(r =>
+      (r.from === state.profiles[0].id && r.to === state.profiles[2].id) ||
+      (r.from === state.profiles[2].id && r.to === state.profiles[0].id)
+    );
+    if (rel13 && rel13.label) {
+      html += `
+        <div class="relation-bridge">
+          <span class="relation-bridge-names">${esc(state.profiles[0].name)} ↔ ${esc(state.profiles[2].name)}</span>
+          <span class="relation-bridge-label">${esc(rel13.label)}</span>
+        </div>
+      `;
+    }
+  }
+
+  row.innerHTML = html;
 }
 
 function renderTimelinePreview() {
@@ -462,7 +571,7 @@ function renderTimelinePreview() {
 // ===================== EXPORT =====================
 function copyHTML() {
   const preview = document.getElementById('timelinePreview');
-  const html = `<!DOCTYPE html>\n<html lang="ko">\n<head>\n<meta charset="UTF-8"/>\n<meta name="viewport" content="width=device-width,initial-scale=1.0"/>\n<title>연표</title>\n<style>\nbody{font-family:'Noto Sans KR',-apple-system,sans-serif;background:#f5f7fa;display:flex;justify-content:center;padding:2rem;}\n.timeline-wrapper{background:#fdf8f0;border-radius:16px;padding:2rem 1.5rem;box-shadow:0 4px 30px rgba(0,0,0,0.1);max-width:640px;width:100%;}\n.timeline-title{text-align:center;font-size:1.3rem;font-weight:700;color:#333;margin-bottom:1.5rem;}\n.profiles-row{display:flex;flex-wrap:wrap;gap:1rem;margin-bottom:2rem;}\n.profile-chip{display:flex;align-items:center;gap:0.6rem;background:#fff;border-radius:12px;padding:0.5rem 0.9rem;box-shadow:0 2px 8px rgba(0,0,0,0.08);}\n.profile-avatar{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.85rem;font-weight:700;color:#fff;}\n.profile-avatar img{width:100%;height:100%;border-radius:50%;object-fit:cover;}\n.profile-info strong{display:block;font-size:0.85rem;font-weight:700;color:#333;}\n.profile-info span{font-size:0.75rem;color:#888;}\n.timeline-list{position:relative;}\n.timeline-node{position:relative;padding-left:36px;display:flex;flex-direction:column;text-align:left;}\n.timeline-node.align-right{padding-left:0;padding-right:36px;text-align:right;}\n.timeline-node.align-right .node-marker{left:auto;right:0;}\n.timeline-node.align-center-left{padding-left:0;padding-right:calc(50% + 18px);text-align:right;}\n.timeline-node.align-center-left .node-marker{left:auto;}\n.timeline-node.align-center-right{padding-right:0;padding-left:calc(50% + 18px);text-align:left;}\n.node-marker{position:absolute;border-radius:50%;border:2px solid #4A90D9;background:transparent;}\n.node-marker.last{background:currentColor;border-color:currentColor;}\n.node-time{font-size:0.85rem;font-weight:700;margin-bottom:0.25rem;}\n.node-desc{font-size:0.88rem;line-height:1.65;white-space:pre-wrap;word-break:break-word;}\n</style>\n</head>\n<body>\n${preview.outerHTML}\n</body>\n</html>`;
+  const html = `<!DOCTYPE html>\n<html lang="ko">\n<head>\n<meta charset="UTF-8"/>\n<meta name="viewport" content="width=device-width,initial-scale=1.0"/>\n<title>연표</title>\n<style>\nbody{font-family:'Noto Sans KR',-apple-system,sans-serif;background:#f5f7fa;display:flex;justify-content:center;padding:2rem;}\n.timeline-wrapper{background:#fdf8f0;border-radius:16px;padding:2rem 1.5rem;box-shadow:0 4px 30px rgba(0,0,0,0.1);max-width:640px;width:100%;}\n.timeline-title{text-align:center;font-size:1.3rem;font-weight:700;color:#333;margin-bottom:1.5rem;}\n.profiles-row-v2{display:flex;align-items:center;justify-content:center;gap:0;margin-bottom:2rem;flex-wrap:wrap;}\n.profile-chip-v2{display:flex;flex-direction:column;align-items:center;gap:0.3rem;}\n.profile-avatar-v2{width:48px;height:48px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1rem;font-weight:700;color:#fff;overflow:hidden;}\n.profile-avatar-v2 img{width:100%;height:100%;border-radius:50%;object-fit:cover;}\n.profile-name-v2{font-size:0.78rem;font-weight:600;color:#333;text-align:center;}\n.relation-arrow-block{display:flex;flex-direction:column;align-items:center;padding:0 0.6rem;gap:0.1rem;}\n.relation-label{font-size:0.7rem;font-weight:700;color:#555;}\n.relation-arrows{display:flex;gap:0.15rem;font-size:0.65rem;color:#999;}\n.relation-bridge{width:100%;text-align:center;margin-top:0.4rem;font-size:0.7rem;color:#888;display:flex;align-items:center;justify-content:center;gap:0.4rem;}\n.relation-bridge-names{color:#999;}\n.relation-bridge-label{font-weight:700;color:#555;}\n.timeline-list{position:relative;}\n.timeline-node{position:relative;padding-left:36px;display:flex;flex-direction:column;text-align:left;}\n.timeline-node.align-right{padding-left:0;padding-right:36px;text-align:right;}\n.timeline-node.align-right .node-marker{left:auto;right:0;}\n.timeline-node.align-center-left{padding-left:0;padding-right:calc(50% + 18px);text-align:right;}\n.timeline-node.align-center-left .node-marker{left:auto;}\n.timeline-node.align-center-right{padding-right:0;padding-left:calc(50% + 18px);text-align:left;}\n.node-marker{position:absolute;border-radius:50%;border:2px solid #4A90D9;background:transparent;}\n.node-marker.last{background:currentColor;border-color:currentColor;}\n.node-time{font-size:0.85rem;font-weight:700;margin-bottom:0.25rem;}\n.node-desc{font-size:0.88rem;line-height:1.65;white-space:pre-wrap;word-break:break-word;}\n</style>\n</head>\n<body>\n${preview.outerHTML}\n</body>\n</html>`;
   navigator.clipboard.writeText(html).then(() => alert('HTML이 클립보드에 복사되었습니다!'))
     .catch(() => { const ta = document.createElement('textarea'); ta.value = html; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta); alert('HTML이 클립보드에 복사되었습니다!'); });
 }
@@ -472,6 +581,7 @@ function saveJSON() {
     version: 3,
     profiles: state.profiles,
     nodes: state.nodes,
+    relations: state.relations,
     nextProfileId: state.nextProfileId,
     nextNodeId: state.nextNodeId,
     font: getSelectedFont(),
@@ -495,11 +605,9 @@ function loadJSON(event) {
       const data = JSON.parse(e.target.result);
       if (data.profiles) { state.profiles = data.profiles; collapsedProfiles.clear(); data.profiles.forEach(p => collapsedProfiles.add(p.id)); }
       if (data.nodes) {
-        state.nodes = data.nodes.map(n => ({
-          ...n,
-          centerSide: n.centerSide || 'left',
-        }));
+        state.nodes = data.nodes.map(n => ({ ...n, centerSide: n.centerSide || 'left' }));
       }
+      if (data.relations) { state.relations = data.relations; } else { rebuildRelations(); }
       if (data.nextProfileId) state.nextProfileId = data.nextProfileId;
       if (data.nextNodeId) state.nextNodeId = data.nextNodeId;
       if (data.font) document.getElementById('fontSelect').value = data.font;
