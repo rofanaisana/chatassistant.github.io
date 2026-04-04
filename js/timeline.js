@@ -7,8 +7,7 @@ const state = {
   nextNodeId: 1,
 };
 
-const AVATAR_COLORS = ['#4A90D9', '#e9658b', '#f5a623'];
-const collapsedProfiles = new Set();
+const AVATAR_COLORS = ['#4A90D9', '#e9658b', '#f5a623', '#7ed321', '#9b59b6', '#1abc9c'];
 
 const NODE_SHAPES = [
   { value: 'circle', label: '● 원' },
@@ -48,8 +47,8 @@ function switchTab(tab) {
 
 // ===================== PROFILE MANAGEMENT =====================
 function addProfile() {
-  if (state.profiles.length >= 3) {
-    alert('인물은 최대 3인까지 추가할 수 있습니다.');
+  if (state.profiles.length >= 6) {
+    alert('인물은 최대 6인까지 추가할 수 있습니다.');
     return;
   }
   const id = state.nextProfileId++;
@@ -62,20 +61,10 @@ function addProfile() {
 
 function removeProfile(id) {
   state.profiles = state.profiles.filter(p => p.id !== id);
-  collapsedProfiles.delete(id);
   rebuildRelations();
   renderProfiles();
   renderPreview();
   updateProfileBtn();
-}
-
-function toggleProfileCard(id) {
-  if (collapsedProfiles.has(id)) {
-    collapsedProfiles.delete(id);
-  } else {
-    collapsedProfiles.add(id);
-  }
-  renderProfiles();
 }
 
 function updateProfile(id, field, value) {
@@ -83,8 +72,9 @@ function updateProfile(id, field, value) {
   if (profile) {
     profile[field] = value;
     renderPreview();
+    // 이름 변경 시 관계 UI도 갱신
     if (field === 'name') {
-      renderProfiles();
+      renderRelationsUI();
     }
   }
 }
@@ -95,32 +85,39 @@ function handleProfileImage(id, input) {
   const reader = new FileReader();
   reader.onload = (e) => {
     const profile = state.profiles.find(p => p.id === id);
-    if (profile) { profile.imgUrl = e.target.result; renderProfiles(); renderPreview(); }
+    if (profile) {
+      profile.imgUrl = e.target.result;
+      renderProfiles();
+      renderPreview();
+    }
   };
   reader.readAsDataURL(file);
 }
 
 function removeProfileImage(id) {
   const profile = state.profiles.find(p => p.id === id);
-  if (profile) { profile.imgUrl = ''; renderProfiles(); renderPreview(); }
+  if (profile) {
+    profile.imgUrl = '';
+    renderProfiles();
+    renderPreview();
+  }
 }
 
 // ===================== RELATION MANAGEMENT =====================
 function rebuildRelations() {
   const newRelations = [];
-  for (let i = 0; i < state.profiles.length; i++) {
-    for (let j = i + 1; j < state.profiles.length; j++) {
-      const a = state.profiles[i].id;
-      const b = state.profiles[j].id;
-      const existing = state.relations.find(r =>
-        (r.from === a && r.to === b) || (r.from === b && r.to === a)
-      );
-      newRelations.push({
-        from: a,
-        to: b,
-        label: existing ? existing.label : '',
-      });
-    }
+  // 인접 인물 쌍만 (0↔1, 1↔2, 2↔3, ...)
+  for (let i = 0; i < state.profiles.length - 1; i++) {
+    const a = state.profiles[i].id;
+    const b = state.profiles[i + 1].id;
+    const existing = state.relations.find(r =>
+      (r.from === a && r.to === b) || (r.from === b && r.to === a)
+    );
+    newRelations.push({
+      from: a,
+      to: b,
+      label: existing ? existing.label : '',
+    });
   }
   state.relations = newRelations;
 }
@@ -182,42 +179,35 @@ function renderProfiles() {
   state.profiles.forEach((profile, idx) => {
     const card = document.createElement('div');
     card.className = 'character-card';
-    const isCollapsed = collapsedProfiles.has(profile.id);
     const avatarPreview = profile.imgUrl
       ? `<img src="${escAttr(profile.imgUrl)}" style="width:28px;height:28px;border-radius:50%;object-fit:cover;" />`
       : esc(profile.name.charAt(0));
     card.innerHTML = `
-      <div class="character-card-header" onclick="toggleProfileCard(${profile.id})">
+      <div class="character-card-header">
         <div style="display:flex;align-items:center;gap:0.5rem;">
           <div class="profile-avatar" style="background:${AVATAR_COLORS[idx % AVATAR_COLORS.length]};width:28px;height:28px;font-size:0.7rem;">
             ${avatarPreview}
           </div>
           <span class="character-num">인물 ${idx + 1}</span>
-          <span style="font-size:0.82rem;color:#555;max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(profile.name)}</span>
         </div>
-        <div style="display:flex;align-items:center;gap:0.3rem;">
-          <i class="fa-solid fa-chevron-down" style="font-size:0.75rem;color:#aaa;transition:transform 0.2s;${isCollapsed ? 'transform:rotate(-90deg);' : ''}"></i>
-          <button class="btn-icon danger" onclick="event.stopPropagation();removeProfile(${profile.id})" title="삭제">
-            <i class="fa-solid fa-xmark"></i>
-          </button>
-        </div>
+        <button class="btn-icon danger" onclick="removeProfile(${profile.id})" title="삭제">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
       </div>
-      <div class="char-card-body${isCollapsed ? ' collapsed' : ''}">
-        <div class="form-group">
-          <label class="form-label">이름</label>
-          <input type="text" class="form-input" value="${escAttr(profile.name)}"
-            oninput="updateProfile(${profile.id}, 'name', this.value)" placeholder="인물 이름" />
-        </div>
-        <div class="form-group">
-          <label class="form-label">프로필 이미지</label>
-          <div class="profile-img-upload">
-            <button class="btn btn-secondary btn-sm" onclick="document.getElementById('imgUpload-${profile.id}').click()">
-              <i class="fa-solid fa-camera"></i> ${profile.imgUrl ? '변경' : '업로드'}
-            </button>
-            ${profile.imgUrl ? `<button class="btn btn-danger btn-sm" onclick="removeProfileImage(${profile.id})"><i class="fa-solid fa-trash"></i> 삭제</button>` : ''}
-            <input type="file" id="imgUpload-${profile.id}" accept="image/*" style="display:none"
-              onchange="handleProfileImage(${profile.id}, this)" />
-          </div>
+      <div class="form-group">
+        <label class="form-label">이름</label>
+        <input type="text" class="form-input" value="${escAttr(profile.name)}"
+          oninput="updateProfile(${profile.id}, 'name', this.value)" placeholder="인물 이름" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">프로필 ���미지</label>
+        <div class="profile-img-upload">
+          <button class="btn btn-secondary btn-sm" onclick="document.getElementById('imgUpload-${profile.id}').click()">
+            <i class="fa-solid fa-camera"></i> ${profile.imgUrl ? '변경' : '업로드'}
+          </button>
+          ${profile.imgUrl ? `<button class="btn btn-danger btn-sm" onclick="removeProfileImage(${profile.id})"><i class="fa-solid fa-trash"></i> 삭제</button>` : ''}
+          <input type="file" id="imgUpload-${profile.id}" accept="image/*" style="display:none"
+            onchange="handleProfileImage(${profile.id}, this)" />
         </div>
       </div>
     `;
@@ -229,7 +219,19 @@ function renderProfiles() {
 
 function updateProfileBtn() {
   const btn = document.getElementById('addProfileBtn');
-  btn.disabled = state.profiles.length >= 3;
+  btn.disabled = state.profiles.length >= 6;
+}
+
+// ===================== NODE SHAPES =====================
+function getShapeChar(shape) {
+  const map = {
+    circle: { char: '●', outline: '○' },
+    heart: { char: '♥', outline: '♡' },
+    star: { char: '★', outline: '☆' },
+    triangle: { char: '▲', outline: '△' },
+    diamond: { char: '◆', outline: '◇' },
+  };
+  return map[shape] || map.circle;
 }
 
 // ===================== NODE MANAGEMENT =====================
@@ -239,9 +241,9 @@ function addNode() {
     id,
     time: '',
     desc: '',
+    gap: 40,
     color: '#4A90D9',
     shape: 'circle',
-    centerSide: 'left',
   });
   renderNodes();
   renderPreview();
@@ -264,34 +266,24 @@ function clearAllNodes() {
 function updateNode(id, field, value) {
   const node = state.nodes.find(n => n.id === id);
   if (node) {
-    node[field] = value;
+    if (field === 'gap') {
+      node[field] = parseInt(value, 10) || 0;
+    } else {
+      node[field] = value;
+    }
     if (field === 'color' || field === 'shape') {
       const item = document.querySelector(`.node-item[data-id="${id}"]`);
       if (item) {
         const dot = item.querySelector('.node-dot-preview');
-        if (dot) updateDotPreview(dot, node);
+        if (dot) {
+          const shapeInfo = getShapeChar(node.shape || 'circle');
+          dot.textContent = shapeInfo.char;
+          dot.style.color = node.color;
+        }
       }
     }
-    if (field === 'centerSide') renderNodes();
     renderPreview();
   }
-}
-
-function updateDotPreview(dot, node) {
-  const shapeInfo = getShapeChar(node.shape || 'circle');
-  dot.textContent = shapeInfo.char;
-  dot.style.color = node.color;
-}
-
-function getShapeChar(shape) {
-  const map = {
-    circle: { char: '●', outline: '○' },
-    heart: { char: '♥', outline: '♡' },
-    star: { char: '★', outline: '☆' },
-    triangle: { char: '▲', outline: '△' },
-    diamond: { char: '◆', outline: '◇' },
-  };
-  return map[shape] || map.circle;
 }
 
 function renderNodes() {
@@ -300,7 +292,6 @@ function renderNodes() {
     list.innerHTML = `<div class="empty-state"><i class="fa-solid fa-timeline"></i><p>노드를 추가해 보세요</p></div>`;
     return;
   }
-  const align = document.getElementById('alignSelect') ? document.getElementById('alignSelect').value : 'left';
   list.innerHTML = '';
   state.nodes.forEach((node, idx) => {
     const item = document.createElement('div');
@@ -308,17 +299,6 @@ function renderNodes() {
     item.dataset.id = node.id;
 
     const shapeInfo = getShapeChar(node.shape || 'circle');
-
-    const centerSideUI = align === 'center' ? `
-      <div class="form-group">
-        <label class="form-label">배치</label>
-        <select class="form-select" onchange="updateNode(${node.id}, 'centerSide', this.value)">
-          <option value="left" ${(node.centerSide || 'left') === 'left' ? 'selected' : ''}>← 좌측</option>
-          <option value="right" ${node.centerSide === 'right' ? 'selected' : ''}>→ 우측</option>
-        </select>
-      </div>
-    ` : '';
-
     const shapeOptions = NODE_SHAPES.map(s =>
       `<option value="${s.value}" ${(node.shape || 'circle') === s.value ? 'selected' : ''}>${s.label}</option>`
     ).join('');
@@ -343,8 +323,12 @@ function renderNodes() {
           oninput="updateNode(${node.id}, 'desc', this.value)"
           placeholder="사건 설명을 입력하세요">${esc(node.desc)}</textarea>
       </div>
-      <div class="node-row">
-        ${centerSideUI}
+      <div class="node-row-3">
+        <div class="form-group">
+          <label class="form-label">간격 (px)</label>
+          <input type="number" class="form-input" value="${node.gap}" min="0" max="300"
+            oninput="updateNode(${node.id}, 'gap', this.value)" placeholder="40" />
+        </div>
         <div class="form-group">
           <label class="form-label">모양</label>
           <select class="form-select" onchange="updateNode(${node.id}, 'shape', this.value)">
@@ -431,84 +415,45 @@ function renderPreview() {
 
 function renderProfilesPreview() {
   const row = document.getElementById('profilesRow');
-  if (state.profiles.length === 0) { row.innerHTML = ''; return; }
-
-  const count = state.profiles.length;
-
-  if (count === 3) {
-    // ====== 역삼각형 레이아웃 ======
-    const p0 = state.profiles[0];
-    const p1 = state.profiles[1];
-    const p2 = state.profiles[2];
-    const rel01 = getRelationLabel(p0.id, p1.id);
-    const rel12 = getRelationLabel(p1.id, p2.id);
-    const rel02 = getRelationLabel(p0.id, p2.id);
-
-    const makeAvatar = (p, idx) => {
-      const content = p.imgUrl
-        ? `<img src="${escAttr(p.imgUrl)}" />`
-        : esc(p.name.charAt(0));
-      return `
-        <div class="profile-chip-v2">
-          <div class="profile-avatar-v2" style="background:${AVATAR_COLORS[idx % AVATAR_COLORS.length]}">${content}</div>
-          <span class="profile-name-v2">${esc(p.name)}</span>
-        </div>
-      `;
-    };
-
-    const makeArrow = (label) => `
-      <div class="relation-arrow-block">
-        ${label ? `<span class="relation-label">${esc(label)}</span>` : '<span class="relation-label-empty"></span>'}
-        <div class="relation-arrows"><span>←</span><span>→</span></div>
-      </div>
-    `;
-
-    row.innerHTML = `
-      <div class="profiles-triangle">
-        <div class="profiles-triangle-top">
-          ${makeAvatar(p0, 0)}
-          ${makeArrow(rel01)}
-          ${makeAvatar(p1, 1)}
-        </div>
-        <div class="profiles-triangle-bottom">
-          <div class="profiles-triangle-line-left">
-            ${rel02 ? `<span class="relation-label-diagonal">${esc(rel02)}</span>` : ''}
-            <div class="relation-arrows-small"><span>↕</span></div>
-          </div>
-          ${makeAvatar(p2, 2)}
-          <div class="profiles-triangle-line-right">
-            ${rel12 ? `<span class="relation-label-diagonal">${esc(rel12)}</span>` : ''}
-            <div class="relation-arrows-small"><span>↕</span></div>
-          </div>
-        </div>
-      </div>
-    `;
-  } else {
-    // ====== 1~2인: 가로 배치 ======
-    let html = '<div class="profiles-inline">';
-    state.profiles.forEach((p, idx) => {
-      if (idx > 0) {
-        const rel = getRelationLabel(state.profiles[idx - 1].id, p.id);
-        html += `
-          <div class="relation-arrow-block">
-            ${rel ? `<span class="relation-label">${esc(rel)}</span>` : '<span class="relation-label-empty"></span>'}
-            <div class="relation-arrows"><span>←</span><span>→</span></div>
-          </div>
-        `;
-      }
-      const avatarContent = p.imgUrl
-        ? `<img src="${escAttr(p.imgUrl)}" />`
-        : esc(p.name.charAt(0));
-      html += `
-        <div class="profile-chip-v2">
-          <div class="profile-avatar-v2" style="background:${AVATAR_COLORS[idx % AVATAR_COLORS.length]}">${avatarContent}</div>
-          <span class="profile-name-v2">${esc(p.name)}</span>
-        </div>
-      `;
-    });
-    html += '</div>';
-    row.innerHTML = html;
+  if (state.profiles.length === 0) {
+    row.innerHTML = '';
+    row.className = 'profiles-row';
+    return;
   }
+
+  // 항상 한 줄 가로 배치: 인물1 ←→ 인물2 ←→ 인물3
+  let html = '<div class="profiles-inline">';
+
+  state.profiles.forEach((p, idx) => {
+    // 인접 인물 사이에 관계 화살표 표시
+    if (idx > 0) {
+      const prevP = state.profiles[idx - 1];
+      const relLabel = getRelationLabel(prevP.id, p.id);
+      html += `
+        <div class="relation-arrow-block">
+          ${relLabel ? `<span class="relation-label-preview">${esc(relLabel)}</span>` : '<span class="relation-label-empty"></span>'}
+          <div class="relation-arrows">← →</div>
+        </div>
+      `;
+    }
+
+    const avatarContent = p.imgUrl
+      ? `<img src="${escAttr(p.imgUrl)}" />`
+      : esc(p.name.charAt(0));
+
+    html += `
+      <div class="profile-chip-v2">
+        <div class="profile-avatar-v2" style="background:${AVATAR_COLORS[idx % AVATAR_COLORS.length]}">
+          ${avatarContent}
+        </div>
+        <span class="profile-name-v2">${esc(p.name)}</span>
+      </div>
+    `;
+  });
+
+  html += '</div>';
+  row.innerHTML = html;
+  row.className = 'profiles-row';
 }
 
 function renderTimelinePreview() {
@@ -519,18 +464,17 @@ function renderTimelinePreview() {
   }
 
   const align = document.getElementById('alignSelect') ? document.getElementById('alignSelect').value : 'left';
+  const bgColor = sanitizeColor(document.getElementById('bgColor') ? document.getElementById('bgColor').value : '', '#fdf8f0');
   const lineColor = sanitizeColor(document.getElementById('lineColor') ? document.getElementById('lineColor').value : '', '#c8a97e');
   const timeTextColor = sanitizeColor(document.getElementById('timeTextColor') ? document.getElementById('timeTextColor').value : '', '#4A90D9');
   const descTextColor = sanitizeColor(document.getElementById('descTextColor') ? document.getElementById('descTextColor').value : '', '#555555');
   const lastIdx = state.nodes.length - 1;
-  const defaultGap = 40;
-  const markerSize = 14; // 고정 크기
 
   let html = '';
 
   state.nodes.forEach((node, idx) => {
     const isLast = idx === lastIdx;
-    const gap = isLast ? 0 : defaultGap;
+    const gap = isLast ? 0 : (node.gap || 40);
     const shape = node.shape || 'circle';
     const shapeInfo = getShapeChar(shape);
     const shapeChar = isLast ? shapeInfo.char : shapeInfo.outline;
@@ -540,8 +484,7 @@ function renderTimelinePreview() {
     if (align === 'right') {
       alignClass = ' align-right';
     } else if (align === 'center') {
-      const side = node.centerSide || 'left';
-      alignClass = side === 'left' ? ' align-center-left' : ' align-center-right';
+      alignClass = (idx % 2 === 0) ? ' align-center-left' : ' align-center-right';
     }
 
     html += `
@@ -556,16 +499,24 @@ function renderTimelinePreview() {
   // 연결선 위치
   let linePos = '';
   if (align === 'right') {
-    linePos = `right:5px;`;
+    linePos = 'right:6px;left:auto;';
   } else if (align === 'center') {
-    linePos = `left:50%;transform:translateX(-50%);`;
+    linePos = 'left:50%;transform:translateX(-50%);';
   } else {
-    linePos = `left:5px;`;
+    linePos = 'left:6px;';
   }
 
   list.innerHTML = `
     <div style="position:relative;">
-      <div class="timeline-vertical-line" style="${linePos}background:${lineColor};"></div>
+      <div style="
+        position:absolute;
+        ${linePos}
+        top:6px;
+        width:2px;
+        background:${lineColor};
+        height:calc(100% - 12px);
+        border-radius:2px;
+      "></div>
       ${html}
     </div>
   `;
@@ -574,47 +525,58 @@ function renderTimelinePreview() {
 // ===================== EXPORT =====================
 function copyHTML() {
   const preview = document.getElementById('timelinePreview');
-  const cssText = `
+  const html = `<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>연표</title>
+<style>
 body{font-family:'Noto Sans KR',-apple-system,sans-serif;background:#f5f7fa;display:flex;justify-content:center;padding:2rem;}
 .timeline-wrapper{background:#fdf8f0;border-radius:16px;padding:2rem 1.5rem;box-shadow:0 4px 30px rgba(0,0,0,0.1);max-width:640px;width:100%;}
 .timeline-title{text-align:center;font-size:1.3rem;font-weight:700;color:#333;margin-bottom:1.5rem;}
-.profiles-inline{display:flex;align-items:center;justify-content:center;}
+.profiles-row{display:flex;flex-wrap:wrap;gap:1rem;margin-bottom:2rem;justify-content:center;}
+.profiles-inline{display:flex;align-items:center;justify-content:center;gap:0;flex-wrap:wrap;}
 .profile-chip-v2{display:flex;flex-direction:column;align-items:center;gap:0.3rem;}
 .profile-avatar-v2{width:48px;height:48px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1rem;font-weight:700;color:#fff;overflow:hidden;}
 .profile-avatar-v2 img{width:100%;height:100%;border-radius:50%;object-fit:cover;}
 .profile-name-v2{font-size:0.78rem;font-weight:600;color:#333;text-align:center;}
-.relation-arrow-block{display:flex;flex-direction:column;align-items:center;padding:0 0.5rem;gap:0.1rem;margin-bottom:1.1rem;}
-.relation-label{font-size:0.68rem;font-weight:700;color:#555;}
-.relation-label-empty{height:0.68rem;}
+.relation-arrow-block{display:flex;flex-direction:column;align-items:center;padding:0 0.6rem;gap:0.1rem;margin-bottom:1.1rem;}
+.relation-label-preview{font-size:0.68rem;font-weight:700;color:#555;white-space:nowrap;}
+.relation-label-empty{height:0.85rem;}
 .relation-arrows{font-size:0.6rem;color:#aaa;letter-spacing:1px;}
-.profiles-triangle{display:flex;flex-direction:column;align-items:center;gap:0.3rem;margin-bottom:2rem;}
-.profiles-triangle-top{display:flex;align-items:center;justify-content:center;}
-.profiles-triangle-bottom{display:flex;align-items:flex-start;justify-content:center;gap:0.8rem;margin-top:0.2rem;}
-.profiles-triangle-line-left,.profiles-triangle-line-right{display:flex;flex-direction:column;align-items:center;gap:0.05rem;padding-top:0.2rem;}
-.relation-label-diagonal{font-size:0.65rem;font-weight:700;color:#555;}
-.relation-arrows-small{font-size:0.55rem;color:#aaa;}
 .timeline-list{position:relative;}
-.timeline-vertical-line{position:absolute;top:7px;width:2px;height:calc(100% - 14px);border-radius:2px;}
-.timeline-node{position:relative;padding-left:24px;display:flex;flex-direction:column;text-align:left;}
-.timeline-node.align-right{padding-left:0;padding-right:24px;text-align:right;}
+.timeline-node{position:relative;padding-left:26px;display:flex;flex-direction:column;}
+.timeline-node.align-right{padding-left:0;padding-right:26px;text-align:right;}
+.timeline-node.align-right .node-shape-marker{left:auto;right:0;}
 .timeline-node.align-center-left{padding-left:0;padding-right:calc(50% + 14px);text-align:right;}
-.timeline-node.align-center-right{padding-right:0;padding-left:calc(50% + 14px);text-align:left;}
-.node-shape-marker{position:absolute;font-size:14px;line-height:1;width:14px;text-align:center;}
-.timeline-node .node-shape-marker{left:-1px;top:2px;}
-.timeline-node.align-right .node-shape-marker{left:auto;right:-1px;}
 .timeline-node.align-center-left .node-shape-marker{left:auto;right:calc(50% - 7px);}
+.timeline-node.align-center-right{padding-right:0;padding-left:calc(50% + 14px);text-align:left;}
 .timeline-node.align-center-right .node-shape-marker{left:calc(50% - 7px);right:auto;}
+.node-shape-marker{position:absolute;left:0;top:2px;font-size:14px;line-height:1;width:14px;text-align:center;}
 .node-time{font-size:0.85rem;font-weight:700;margin-bottom:0.25rem;}
-.node-desc{font-size:0.88rem;line-height:1.65;white-space:pre-wrap;word-break:break-word;}
-  `.trim();
-  const html = `<!DOCTYPE html>\n<html lang="ko">\n<head>\n<meta charset="UTF-8"/>\n<meta name="viewport" content="width=device-width,initial-scale=1.0"/>\n<title>연표</title>\n<style>\n${cssText}\n</style>\n</head>\n<body>\n${preview.outerHTML}\n</body>\n</html>`;
+.node-desc{font-size:0.88rem;line-height:1.65;white-space:pre-wrap;}
+</style>
+</head>
+<body>
+${preview.outerHTML}
+</body>
+</html>`;
   navigator.clipboard.writeText(html).then(() => alert('HTML이 클립보드에 복사되었습니다!'))
-    .catch(() => { const ta = document.createElement('textarea'); ta.value = html; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta); alert('HTML이 클립보드에 복사되었습니다!'); });
+    .catch(() => {
+      const ta = document.createElement('textarea');
+      ta.value = html;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+      alert('HTML이 클립보드에 복사되었습니다!');
+    });
 }
 
 function saveJSON() {
   const data = {
-    version: 5,
+    version: 3,
     profiles: state.profiles,
     nodes: state.nodes,
     relations: state.relations,
@@ -629,7 +591,11 @@ function saveJSON() {
     title: document.getElementById('timelineTitle') ? document.getElementById('timelineTitle').value : '',
   };
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'timeline-backup.json'; a.click(); URL.revokeObjectURL(a.href);
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'timeline-backup.json';
+  a.click();
+  URL.revokeObjectURL(a.href);
 }
 
 function loadJSON(event) {
@@ -640,18 +606,27 @@ function loadJSON(event) {
     try {
       const data = JSON.parse(e.target.result);
       if (data.profiles) {
-        state.profiles = data.profiles.map(p => ({ id: p.id, name: p.name || '', imgUrl: p.imgUrl || '' }));
-        collapsedProfiles.clear();
-        data.profiles.forEach(p => collapsedProfiles.add(p.id));
+        state.profiles = data.profiles.map(p => ({
+          id: p.id,
+          name: p.name || '',
+          imgUrl: p.imgUrl || '',
+        }));
       }
       if (data.nodes) {
         state.nodes = data.nodes.map(n => ({
-          id: n.id, time: n.time || '', desc: n.desc || '',
-          color: n.color || '#4A90D9', shape: n.shape || 'circle',
-          centerSide: n.centerSide || 'left',
+          id: n.id,
+          time: n.time || '',
+          desc: n.desc || '',
+          gap: n.gap !== undefined ? n.gap : 40,
+          color: n.color || '#4A90D9',
+          shape: n.shape || 'circle',
         }));
       }
-      if (data.relations) { state.relations = data.relations; } else { rebuildRelations(); }
+      if (data.relations) {
+        state.relations = data.relations;
+      } else {
+        rebuildRelations();
+      }
       if (data.nextProfileId) state.nextProfileId = data.nextProfileId;
       if (data.nextNodeId) state.nextNodeId = data.nextNodeId;
       if (data.font) document.getElementById('fontSelect').value = data.font;
@@ -661,23 +636,59 @@ function loadJSON(event) {
       if (data.timeTextColor && document.getElementById('timeTextColor')) document.getElementById('timeTextColor').value = data.timeTextColor;
       if (data.descTextColor && document.getElementById('descTextColor')) document.getElementById('descTextColor').value = data.descTextColor;
       if (data.title !== undefined && document.getElementById('timelineTitle')) document.getElementById('timelineTitle').value = data.title;
-      renderProfiles(); renderNodes(); renderPreview();
+      renderProfiles();
+      renderNodes();
+      renderPreview();
       alert('불러오기 완료!');
-    } catch (err) { alert('파일을 읽는 중 오류가 발생했습니다.'); }
+    } catch (err) {
+      alert('파일을 읽는 중 오류가 발생했습니다.');
+    }
   };
-  reader.readAsText(file); event.target.value = '';
+  reader.readAsText(file);
+  event.target.value = '';
 }
 
 function saveImage() {
   const preview = document.getElementById('timelinePreview');
   const bgColor = document.getElementById('bgColor') ? document.getElementById('bgColor').value : '#fdf8f0';
-  html2canvas(preview, { scale: 2, backgroundColor: bgColor, useCORS: true })
-    .then(canvas => { const a = document.createElement('a'); a.href = canvas.toDataURL('image/png'); a.download = 'timeline-preview.png'; a.click(); })
-    .catch(() => alert('이미지 저장 중 오류가 발생했습니다.'));
+  html2canvas(preview, {
+    scale: 2,
+    backgroundColor: bgColor,
+    useCORS: true,
+  }).then(canvas => {
+    const a = document.createElement('a');
+    a.href = canvas.toDataURL('image/png');
+    a.download = 'timeline-preview.png';
+    a.click();
+  }).catch(() => alert('이미지 저장 중 오류가 발생했습니다.'));
 }
 
 // ===================== HELPERS =====================
-function esc(str) { return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
-function escDesc(str) { return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/\n/g, '<br>'); }
-function escAttr(str) { return String(str).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
-function sanitizeColor(color, fallback) { return /^#[0-9a-fA-F]{6}$/.test(String(color)) ? String(color) : fallback; }
+function esc(str) {
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+function escDesc(str) {
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/\n/g, '<br>');
+}
+
+function escAttr(str) {
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/"/g, '&quot;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
+
+function sanitizeColor(color, fallback) {
+  return /^#[0-9a-fA-F]{6}$/.test(String(color)) ? String(color) : fallback;
+}
