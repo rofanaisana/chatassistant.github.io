@@ -21,7 +21,7 @@ body {
   line-height: 1.6;
 }
 
-/* ===== 분할 페이지: 전체 스크롤 방지 ===== */
+/* ===== 분할 ���이지: 전체 스크롤 방지 ===== */
 body.split-page {
   overflow: hidden;
   height: 100vh;
@@ -336,18 +336,18 @@ input, textarea, select {
 .toggle-switch input:checked + .toggle-slider { background: #4A90D9; }
 .toggle-switch input:checked + .toggle-slider::before { transform: translateX(20px); }
 
-/* ===================== CHARACTER CARDS (콤팩트) ===================== */
+/* ===================== CHARACTER CARDS (프로필 카드 - 에디터) ===================== */
 .character-card {
   border: 1.5px solid #e8eaf0;
   border-radius: 10px;
   padding: 0;
-  margin-bottom: 0.5rem;
+  margin-bottom: 0.6rem;
   background: #fafbfc;
   position: relative;
   overflow: hidden;
 }
 
-.character-card .form-group { margin-bottom: 0.5rem; }
+.character-card .form-group { margin-bottom: 0.6rem; }
 .character-card .form-group:last-child { margin-bottom: 0; }
 
 .character-card-header {
@@ -358,12 +358,18 @@ input, textarea, select {
   cursor: pointer;
   user-select: none;
   transition: background 0.15s;
+  border-bottom: 1px solid #f0f2f5;
 }
 
 .character-card-header:hover { background: #f0f2f5; }
 
+/* 카드 본문 영역 — 패딩 추가 */
+.character-card-body {
+  padding: 0.7rem 0.8rem 0.8rem;
+}
+
 .char-card-body {
-  padding: 0 0.8rem 0.7rem;
+  padding: 0.7rem 0.8rem 0.8rem;
   overflow: hidden;
   transition: max-height 0.25s ease, padding 0.25s ease;
 }
@@ -579,10 +585,6 @@ input, textarea, select {
   margin-bottom: 2rem;
 }
 
-.profiles-row-centered {
-  justify-content: center;
-}
-
 .profile-chip { display: flex; align-items: center; gap: 0.6rem; background: #fff; border-radius: 12px; padding: 0.5rem 0.9rem; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
 .profile-avatar { width: 38px; height: 38px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.85rem; font-weight: 700; color: #fff; flex-shrink: 0; }
 .profile-avatar img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; }
@@ -624,6 +626,7 @@ input, textarea, select {
 }
 .timeline-node.align-center-left .node-marker {
   left: auto;
+  right: calc(50% - 7px);
 }
 
 /* 중앙 정렬 - 우측 노드 */
@@ -631,6 +634,10 @@ input, textarea, select {
   padding-left: calc(50% + 14px);
   padding-right: 0;
   text-align: left;
+}
+.timeline-node.align-center-right .node-marker {
+  left: calc(50% - 7px);
+  right: auto;
 }
 
 .node-time { font-size: 0.85rem; font-weight: 700; color: #555; margin-bottom: 0.25rem; }
@@ -775,6 +782,9 @@ input, textarea, select {
   color: #555;
   white-space: nowrap;
   text-align: center;
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .relation-label-empty {
@@ -824,17 +834,17 @@ input, textarea, select {
 
 /* left 정렬 (기본) */
 .timeline-node .node-shape-marker {
-  left: -1px;
+  left: 0;
   top: 2px;
 }
 
 /* right 정렬 */
 .timeline-node.align-right .node-shape-marker {
   left: auto;
-  right: -1px;
+  right: 0;
 }
 
-/* center 정렬 */
+/* center 정렬 — 마커를 연결선(50%) 기준 정확히 중앙 배치 */
 .timeline-node.align-center-left .node-shape-marker {
   left: auto;
   right: calc(50% - 7px);
@@ -865,7 +875,7 @@ input, textarea, select {
 /* ===================== CUSTOM THEME ===================== */
 .theme-custom .messenger-header .room-name { color: #fff; }
 .theme-custom .bubble-row.left .bubble-text { border-radius: 0 18px 18px 18px; }
-.theme-custom .bubble-row.right .bubble-text { border-radius: 18px 0 18px; }
+.theme-custom .bubble-row.right .bubble-text { border-radius: 18px 0 18px 18px; }
 .theme-custom .bubble-name { opacity: 0.7; }
 .theme-custom .scene-block::before, .theme-custom .scene-block::after { background: currentColor; opacity: 0.3; }
 .theme-custom .scene-text { opacity: 0.75; }
