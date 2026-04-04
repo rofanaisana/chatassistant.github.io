@@ -37,7 +37,7 @@ function addProfile() {
     return;
   }
   const id = state.nextProfileId++;
-  state.profiles.push({ id, name: `인물 ${id}`, desc: '' });
+  state.profiles.push({ id, name: `인물 ${id}`, desc: '', imgUrl: '' });
   renderProfiles();
   renderPreview();
   updateProfileBtn();
@@ -53,7 +53,39 @@ function removeProfile(id) {
 function updateProfile(id, field, value) {
   const profile = state.profiles.find(p => p.id === id);
   if (profile) {
+    if (field === 'desc') {
+      value = value.slice(0, 30);
+    }
     profile[field] = value;
+    renderPreview();
+    // Update char counter without full re-render
+    if (field === 'desc') {
+      const counter = document.getElementById(`descCount-${id}`);
+      if (counter) counter.textContent = `${value.length}/30`;
+    }
+  }
+}
+
+function handleProfileImage(id, input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const profile = state.profiles.find(p => p.id === id);
+    if (profile) {
+      profile.imgUrl = e.target.result;
+      renderProfiles();
+      renderPreview();
+    }
+  };
+  reader.readAsDataURL(file);
+}
+
+function removeProfileImage(id) {
+  const profile = state.profiles.find(p => p.id === id);
+  if (profile) {
+    profile.imgUrl = '';
+    renderProfiles();
     renderPreview();
   }
 }
@@ -69,11 +101,14 @@ function renderProfiles() {
   state.profiles.forEach((profile, idx) => {
     const card = document.createElement('div');
     card.className = 'profile-card';
+    const avatarPreview = profile.imgUrl
+      ? `<img src="${escAttr(profile.imgUrl)}" style="width:28px;height:28px;border-radius:50%;object-fit:cover;" />`
+      : esc(profile.name.charAt(0));
     card.innerHTML = `
       <div class="profile-card-header">
         <div style="display:flex;align-items:center;gap:0.5rem;">
           <div class="profile-avatar" style="background:${AVATAR_COLORS[idx % AVATAR_COLORS.length]};width:28px;height:28px;font-size:0.7rem;">
-            ${esc(profile.name.charAt(0))}
+            ${avatarPreview}
           </div>
           <span style="font-size:0.82rem;font-weight:700;color:#4A90D9;">인물 ${idx + 1}</span>
         </div>
@@ -88,8 +123,20 @@ function renderProfiles() {
       </div>
       <div class="form-group">
         <label class="form-label">짧은 설명</label>
-        <input type="text" class="form-input" value="${escAttr(profile.desc)}"
+        <input type="text" class="form-input" value="${escAttr(profile.desc)}" maxlength="30"
           oninput="updateProfile(${profile.id}, 'desc', this.value)" placeholder="예: 주인공, 마법사" />
+        <div class="char-count" id="descCount-${profile.id}">${profile.desc.length}/30</div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">프로필 이미지</label>
+        <div class="profile-img-upload">
+          <button class="btn btn-secondary btn-sm" onclick="document.getElementById('imgUpload-${profile.id}').click()">
+            <i class="fa-solid fa-camera"></i> ${profile.imgUrl ? '변경' : '업로드'}
+          </button>
+          ${profile.imgUrl ? `<button class="btn btn-danger btn-sm" onclick="removeProfileImage(${profile.id})"><i class="fa-solid fa-trash"></i> 삭제</button>` : ''}
+          <input type="file" id="imgUpload-${profile.id}" accept="image/*" style="display:none"
+            onchange="handleProfileImage(${profile.id}, this)" />
+        </div>
       </div>
     `;
     list.appendChild(card);
@@ -253,6 +300,26 @@ function renderPreview() {
   const previewEl = document.getElementById('timelinePreview');
   previewEl.style.fontFamily = getFontStack(font);
 
+  // Apply background color
+  const bgColor = document.getElementById('bgColor') ? document.getElementById('bgColor').value : '#fdf8f0';
+  previewEl.style.background = bgColor;
+
+  // Render title
+  const titleInput = document.getElementById('timelineTitle');
+  const titleVal = titleInput ? titleInput.value.trim() : '';
+  let titleEl = document.getElementById('timelineTitleEl');
+  if (titleVal) {
+    if (!titleEl) {
+      titleEl = document.createElement('div');
+      titleEl.id = 'timelineTitleEl';
+      titleEl.className = 'timeline-title';
+      previewEl.insertBefore(titleEl, previewEl.firstChild);
+    }
+    titleEl.textContent = titleVal;
+  } else if (titleEl) {
+    titleEl.remove();
+  }
+
   renderProfilesPreview();
   renderTimelinePreview();
 }
@@ -263,17 +330,22 @@ function renderProfilesPreview() {
     row.innerHTML = '';
     return;
   }
-  row.innerHTML = state.profiles.map((p, idx) => `
+  row.innerHTML = state.profiles.map((p, idx) => {
+    const avatarContent = p.imgUrl
+      ? `<img src="${escAttr(p.imgUrl)}" />`
+      : esc(p.name.charAt(0));
+    return `
     <div class="profile-chip">
       <div class="profile-avatar" style="background:${AVATAR_COLORS[idx % AVATAR_COLORS.length]}">
-        ${esc(p.name.charAt(0))}
+        ${avatarContent}
       </div>
       <div class="profile-info">
         <strong>${esc(p.name)}</strong>
         <span>${esc(p.desc)}</span>
       </div>
     </div>
-  `).join('');
+  `;
+  }).join('');
 }
 
 function renderTimelinePreview() {
@@ -283,31 +355,53 @@ function renderTimelinePreview() {
     return;
   }
 
+  const align = document.getElementById('alignSelect') ? document.getElementById('alignSelect').value : 'left';
+  const bgColor = document.getElementById('bgColor') ? document.getElementById('bgColor').value : '#fdf8f0';
+  const lineColor = document.getElementById('lineColor') ? document.getElementById('lineColor').value : '#c8a97e';
   const lastIdx = state.nodes.length - 1;
 
-  // Build the total height of the line (sum of all gaps + approximate node heights except last gap)
-  // We'll use a CSS variable approach: draw the line only up to the last node
   let html = '';
-  let lineHeight = 0;
 
   state.nodes.forEach((node, idx) => {
     const isLast = idx === lastIdx;
     const dotSize = node.size || 10;
     const gap = isLast ? 0 : (node.gap || 40);
-    const nodeHeight = Math.max(dotSize, 20) + 30 + (node.desc ? node.desc.split('\n').length * 20 : 0);
-    if (!isLast) lineHeight += nodeHeight + gap;
+
+    // Determine node alignment class and marker style
+    let alignClass = '';
+    let markerLeft = `${Math.round((20 - dotSize) / 2)}px`;
+    let markerRight = 'auto';
+
+    if (align === 'right') {
+      alignClass = ' align-right';
+      markerLeft = 'auto';
+      markerRight = `${Math.round((20 - dotSize) / 2)}px`;
+    } else if (align === 'center') {
+      if (idx % 2 === 0) {
+        alignClass = ' align-center-left';
+        markerLeft = 'auto';
+        markerRight = `calc(50% - ${dotSize / 2}px)`;
+      } else {
+        alignClass = ' align-center-right';
+        markerLeft = `calc(50% - ${dotSize / 2}px)`;
+        markerRight = 'auto';
+      }
+    }
+
+    const nodeBg = isLast ? node.color : bgColor;
 
     const markerStyle = `
       width:${dotSize}px;
       height:${dotSize}px;
-      background-color:${isLast ? node.color : 'transparent'};
+      background-color:${nodeBg};
       border:2px solid ${node.color};
       top:4px;
-      left:${Math.round((20 - dotSize) / 2)}px;
+      left:${markerLeft};
+      right:${markerRight};
     `;
 
     html += `
-      <div class="timeline-node" style="padding-bottom:${isLast ? 0 : gap}px;">
+      <div class="timeline-node${alignClass}" style="padding-bottom:${isLast ? 0 : gap}px;">
         <div class="node-marker${isLast ? ' last' : ''}" style="${markerStyle}"></div>
         <div class="node-time" style="color:${node.color};">${esc(node.time || '시점')}</div>
         <div class="node-desc">${escDesc(node.desc || '')}</div>
@@ -315,23 +409,29 @@ function renderTimelinePreview() {
     `;
   });
 
-  // Wrap with line container
-  // The line goes from top of first node dot to top of last node dot
-  // We calculate line height as total padding-bottom of all nodes except last
-  const totalLineHeight = state.nodes.slice(0, -1).reduce((sum, node) => {
-    return sum + (node.gap || 40) + 50; // 50 is approximate node content height
-  }, 0);
+  // Line position based on alignment
+  let lineLeft = '9px';
+  let lineRight = 'auto';
+  if (align === 'right') {
+    lineLeft = 'auto';
+    lineRight = '9px';
+  } else if (align === 'center') {
+    lineLeft = '50%';
+    lineRight = 'auto';
+  }
 
   list.innerHTML = `
     <div style="position:relative;">
       <div style="
         position:absolute;
-        left:9px;
+        left:${lineLeft};
+        right:${lineRight};
         top:6px;
         width:2px;
-        background:linear-gradient(to bottom, #c8a97e, #d4b896);
+        background:${lineColor};
         height:calc(100% - 16px);
         border-radius:2px;
+        ${align === 'center' ? 'transform:translateX(-50%);' : ''}
       "></div>
       ${html}
     </div>
@@ -350,13 +450,20 @@ function copyHTML() {
 <style>
 body{font-family:'Noto Sans KR',-apple-system,sans-serif;background:#f5f7fa;display:flex;justify-content:center;padding:2rem;}
 .timeline-wrapper{background:#fdf8f0;border-radius:16px;padding:2rem 1.5rem;box-shadow:0 4px 30px rgba(0,0,0,0.1);max-width:640px;width:100%;}
+.timeline-title{text-align:center;font-size:1.3rem;font-weight:700;color:#333;margin-bottom:1.5rem;}
 .profiles-row{display:flex;flex-wrap:wrap;gap:1rem;margin-bottom:2rem;}
 .profile-chip{display:flex;align-items:center;gap:0.6rem;background:#fff;border-radius:12px;padding:0.5rem 0.9rem;box-shadow:0 2px 8px rgba(0,0,0,0.08);}
 .profile-avatar{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.85rem;font-weight:700;color:#fff;}
+.profile-avatar img{width:100%;height:100%;border-radius:50%;object-fit:cover;}
 .profile-info strong{display:block;font-size:0.85rem;font-weight:700;color:#333;}
 .profile-info span{font-size:0.75rem;color:#888;}
 .timeline-list{position:relative;}
 .timeline-node{position:relative;padding-left:36px;display:flex;flex-direction:column;}
+.timeline-node.align-right{padding-left:0;padding-right:36px;text-align:right;}
+.timeline-node.align-right .node-marker{left:auto;right:0;}
+.timeline-node.align-center-left{padding-left:0;padding-right:calc(50% + 18px);text-align:right;}
+.timeline-node.align-center-left .node-marker{left:auto;}
+.timeline-node.align-center-right{padding-right:0;padding-left:calc(50% + 18px);text-align:left;}
 .node-marker{position:absolute;border-radius:50%;border:2px solid #4A90D9;background:transparent;}
 .node-marker.last{background:currentColor;border-color:currentColor;}
 .node-time{font-size:0.85rem;font-weight:700;margin-bottom:0.25rem;}
@@ -388,6 +495,10 @@ function saveJSON() {
     nextProfileId: state.nextProfileId,
     nextNodeId: state.nextNodeId,
     font: getSelectedFont(),
+    align: document.getElementById('alignSelect') ? document.getElementById('alignSelect').value : 'left',
+    bgColor: document.getElementById('bgColor') ? document.getElementById('bgColor').value : '#fdf8f0',
+    lineColor: document.getElementById('lineColor') ? document.getElementById('lineColor').value : '#c8a97e',
+    title: document.getElementById('timelineTitle') ? document.getElementById('timelineTitle').value : '',
   };
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
   const a = document.createElement('a');
@@ -409,6 +520,10 @@ function loadJSON(event) {
       if (data.nextProfileId) state.nextProfileId = data.nextProfileId;
       if (data.nextNodeId) state.nextNodeId = data.nextNodeId;
       if (data.font) document.getElementById('fontSelect').value = data.font;
+      if (data.align && document.getElementById('alignSelect')) document.getElementById('alignSelect').value = data.align;
+      if (data.bgColor && document.getElementById('bgColor')) document.getElementById('bgColor').value = data.bgColor;
+      if (data.lineColor && document.getElementById('lineColor')) document.getElementById('lineColor').value = data.lineColor;
+      if (data.title !== undefined && document.getElementById('timelineTitle')) document.getElementById('timelineTitle').value = data.title;
       renderProfiles();
       renderNodes();
       renderPreview();
@@ -423,9 +538,10 @@ function loadJSON(event) {
 
 function saveImage() {
   const preview = document.getElementById('timelinePreview');
+  const bgColor = document.getElementById('bgColor') ? document.getElementById('bgColor').value : '#fdf8f0';
   html2canvas(preview, {
     scale: 2,
-    backgroundColor: '#fdf8f0',
+    backgroundColor: bgColor,
     useCORS: true,
   }).then(canvas => {
     const a = document.createElement('a');

@@ -993,3 +993,75 @@ input[type="color"] {
 .avatar-color-3 { background: #7ed321; }
 .avatar-color-4 { background: #9b59b6; }
 .avatar-color-5 { background: #1abc9c; }
+
+/* ===================== TIMELINE TITLE ===================== */
+.timeline-title {
+  text-align: center;
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: #333;
+  margin-bottom: 1.5rem;
+}
+
+/* ===================== TIMELINE ALIGNMENT ===================== */
+
+/* Right alignment */
+.timeline-node.align-right {
+  padding-left: 0;
+  padding-right: 36px;
+  text-align: right;
+}
+
+.timeline-node.align-right .node-marker {
+  left: auto;
+  right: 0;
+}
+
+/* Center alignment - left side nodes */
+.timeline-node.align-center-left {
+  padding-left: 0;
+  padding-right: calc(50% + 18px);
+  text-align: right;
+}
+
+.timeline-node.align-center-left .node-marker {
+  left: auto;
+  right: calc(50% - 10px);
+}
+
+/* Center alignment - right side nodes */
+.timeline-node.align-center-right {
+  padding-right: 0;
+  padding-left: calc(50% + 18px);
+  text-align: left;
+}
+
+.timeline-node.align-center-right .node-marker {
+  left: calc(50% - 10px);
+}
+
+/* ===================== PROFILE IMAGE ===================== */
+.profile-avatar img {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.profile-img-upload {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.3rem;
+}
+
+.profile-img-upload .btn-sm {
+  font-size: 0.75rem;
+}
+
+.char-count {
+  font-size: 0.72rem;
+  color: #999;
+  text-align: right;
+  margin-top: 2px;
+}
