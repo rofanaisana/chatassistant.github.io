@@ -350,11 +350,12 @@ ${preview.outerHTML}
 </html>`;
   navigator.clipboard.writeText(html).then(() => alert('HTML이 클립보드에 복사되었습니다!'))
     .catch(() => {
+      // Fallback for legacy browsers that don't support clipboard API
       const ta = document.createElement('textarea');
       ta.value = html;
       document.body.appendChild(ta);
       ta.select();
-      document.execCommand('copy');
+      document.execCommand('copy'); // Legacy fallback
       document.body.removeChild(ta);
       alert('HTML이 클립보드에 복사되었습니다!');
     });
