@@ -233,7 +233,26 @@ function initSortable() {
 }
 
 // ===================== PREVIEW =====================
+function getSelectedFont() {
+  const sel = document.getElementById('fontSelect');
+  return sel ? sel.value : 'Pretendard';
+}
+
+function getFontStack(font) {
+  const stacks = {
+    'Pretendard': "'Pretendard', 'Noto Sans KR', -apple-system, BlinkMacSystemFont, system-ui, sans-serif",
+    'RIDIBatang': "'RIDIBatang', 'Noto Sans KR', serif",
+    'Nanum Gothic': "'Nanum Gothic', 'Noto Sans KR', sans-serif",
+    'Nanum Myeongjo': "'Nanum Myeongjo', 'Noto Sans KR', serif",
+  };
+  return stacks[font] || stacks['Pretendard'];
+}
+
 function renderPreview() {
+  const font = getSelectedFont();
+  const previewEl = document.getElementById('timelinePreview');
+  previewEl.style.fontFamily = getFontStack(font);
+
   renderProfilesPreview();
   renderTimelinePreview();
 }
@@ -368,6 +387,7 @@ function saveJSON() {
     nodes: state.nodes,
     nextProfileId: state.nextProfileId,
     nextNodeId: state.nextNodeId,
+    font: getSelectedFont(),
   };
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
   const a = document.createElement('a');
@@ -388,6 +408,7 @@ function loadJSON(event) {
       if (data.nodes) state.nodes = data.nodes;
       if (data.nextProfileId) state.nextProfileId = data.nextProfileId;
       if (data.nextNodeId) state.nextNodeId = data.nextNodeId;
+      if (data.font) document.getElementById('fontSelect').value = data.font;
       renderProfiles();
       renderNodes();
       renderPreview();
