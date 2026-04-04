@@ -47,8 +47,8 @@ function switchTab(tab) {
 
 // ===================== PROFILE MANAGEMENT =====================
 function addProfile() {
-  if (state.profiles.length >= 6) {
-    alert('인물은 최대 6인까지 추가할 수 있습니다.');
+  if (state.profiles.length >= 3) {
+    alert('인물은 최대 3인까지 추가할 수 있습니다.');
     return;
   }
   const id = state.nextProfileId++;
@@ -106,7 +106,7 @@ function removeProfileImage(id) {
 // ===================== RELATION MANAGEMENT =====================
 function rebuildRelations() {
   const newRelations = [];
-  // 인접 인물 쌍만 (0↔1, 1↔2, 2↔3, ...)
+  // 인접 인물 쌍만 (0↔1, 1↔2)
   for (let i = 0; i < state.profiles.length - 1; i++) {
     const a = state.profiles[i].id;
     const b = state.profiles[i + 1].id;
@@ -189,25 +189,33 @@ function renderProfiles() {
             ${avatarPreview}
           </div>
           <span class="character-num">인물 ${idx + 1}</span>
+          <span style="font-size:0.82rem;font-weight:500;color:#555;">${esc(profile.name)}</span>
         </div>
-        <button class="btn-icon danger" onclick="removeProfile(${profile.id})" title="삭제">
-          <i class="fa-solid fa-xmark"></i>
-        </button>
-      </div>
-      <div class="form-group">
-        <label class="form-label">이름</label>
-        <input type="text" class="form-input" value="${escAttr(profile.name)}"
-          oninput="updateProfile(${profile.id}, 'name', this.value)" placeholder="인물 이름" />
-      </div>
-      <div class="form-group">
-        <label class="form-label">프로필 ���미지</label>
-        <div class="profile-img-upload">
-          <button class="btn btn-secondary btn-sm" onclick="document.getElementById('imgUpload-${profile.id}').click()">
-            <i class="fa-solid fa-camera"></i> ${profile.imgUrl ? '변경' : '업로드'}
+        <div style="display:flex;align-items:center;gap:0.2rem;">
+          <button class="btn-icon" onclick="toggleCardBody(this)" title="접기/펼치기">
+            <i class="fa-solid fa-chevron-down"></i>
           </button>
-          ${profile.imgUrl ? `<button class="btn btn-danger btn-sm" onclick="removeProfileImage(${profile.id})"><i class="fa-solid fa-trash"></i> 삭제</button>` : ''}
-          <input type="file" id="imgUpload-${profile.id}" accept="image/*" style="display:none"
-            onchange="handleProfileImage(${profile.id}, this)" />
+          <button class="btn-icon danger" onclick="removeProfile(${profile.id})" title="삭제">
+            <i class="fa-solid fa-xmark"></i>
+          </button>
+        </div>
+      </div>
+      <div class="character-card-body">
+        <div class="form-group">
+          <label class="form-label">이름</label>
+          <input type="text" class="form-input" value="${escAttr(profile.name)}"
+            oninput="updateProfile(${profile.id}, 'name', this.value)" placeholder="인물 이름" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">프로필 이미지</label>
+          <div class="profile-img-upload">
+            <button class="btn btn-secondary btn-sm" onclick="document.getElementById('imgUpload-${profile.id}').click()">
+              <i class="fa-solid fa-camera"></i> ${profile.imgUrl ? '변경' : '업로드'}
+            </button>
+            ${profile.imgUrl ? `<button class="btn btn-danger btn-sm" onclick="removeProfileImage(${profile.id})"><i class="fa-solid fa-trash"></i> 삭제</button>` : ''}
+            <input type="file" id="imgUpload-${profile.id}" accept="image/*" style="display:none"
+              onchange="handleProfileImage(${profile.id}, this)" />
+          </div>
         </div>
       </div>
     `;
@@ -217,9 +225,23 @@ function renderProfiles() {
   renderRelationsUI();
 }
 
+// 카드 접기/펼치기 토글
+function toggleCardBody(btn) {
+  const card = btn.closest('.character-card');
+  const body = card.querySelector('.character-card-body');
+  const icon = btn.querySelector('i');
+  if (body.style.display === 'none') {
+    body.style.display = '';
+    icon.className = 'fa-solid fa-chevron-down';
+  } else {
+    body.style.display = 'none';
+    icon.className = 'fa-solid fa-chevron-up';
+  }
+}
+
 function updateProfileBtn() {
   const btn = document.getElementById('addProfileBtn');
-  btn.disabled = state.profiles.length >= 6;
+  btn.disabled = state.profiles.length >= 3;
 }
 
 // ===================== NODE SHAPES =====================
@@ -496,7 +518,7 @@ function renderTimelinePreview() {
     `;
   });
 
-  // 연결선 위치
+  // 연결선 위치 — 마커 중심에 맞춤
   let linePos = '';
   if (align === 'right') {
     linePos = 'right:6px;left:auto;';
@@ -536,18 +558,18 @@ body{font-family:'Noto Sans KR',-apple-system,sans-serif;background:#f5f7fa;disp
 .timeline-wrapper{background:#fdf8f0;border-radius:16px;padding:2rem 1.5rem;box-shadow:0 4px 30px rgba(0,0,0,0.1);max-width:640px;width:100%;}
 .timeline-title{text-align:center;font-size:1.3rem;font-weight:700;color:#333;margin-bottom:1.5rem;}
 .profiles-row{display:flex;flex-wrap:wrap;gap:1rem;margin-bottom:2rem;justify-content:center;}
-.profiles-inline{display:flex;align-items:center;justify-content:center;gap:0;flex-wrap:wrap;}
-.profile-chip-v2{display:flex;flex-direction:column;align-items:center;gap:0.3rem;}
+.profiles-inline{display:flex;align-items:center;justify-content:center;gap:0;flex-wrap:nowrap;}
+.profile-chip-v2{display:flex;flex-direction:column;align-items:center;gap:0.3rem;flex-shrink:0;}
 .profile-avatar-v2{width:48px;height:48px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1rem;font-weight:700;color:#fff;overflow:hidden;}
 .profile-avatar-v2 img{width:100%;height:100%;border-radius:50%;object-fit:cover;}
 .profile-name-v2{font-size:0.78rem;font-weight:600;color:#333;text-align:center;}
 .relation-arrow-block{display:flex;flex-direction:column;align-items:center;padding:0 0.6rem;gap:0.1rem;margin-bottom:1.1rem;}
-.relation-label-preview{font-size:0.68rem;font-weight:700;color:#555;white-space:nowrap;}
+.relation-label-preview{font-size:0.68rem;font-weight:700;color:#555;white-space:nowrap;text-align:center;max-width:120px;overflow:hidden;text-overflow:ellipsis;}
 .relation-label-empty{height:0.85rem;}
 .relation-arrows{font-size:0.6rem;color:#aaa;letter-spacing:1px;}
 .timeline-list{position:relative;}
-.timeline-node{position:relative;padding-left:26px;display:flex;flex-direction:column;}
-.timeline-node.align-right{padding-left:0;padding-right:26px;text-align:right;}
+.timeline-node{position:relative;padding-left:24px;display:flex;flex-direction:column;}
+.timeline-node.align-right{padding-left:0;padding-right:24px;text-align:right;}
 .timeline-node.align-right .node-shape-marker{left:auto;right:0;}
 .timeline-node.align-center-left{padding-left:0;padding-right:calc(50% + 14px);text-align:right;}
 .timeline-node.align-center-left .node-shape-marker{left:auto;right:calc(50% - 7px);}
@@ -606,7 +628,7 @@ function loadJSON(event) {
     try {
       const data = JSON.parse(e.target.result);
       if (data.profiles) {
-        state.profiles = data.profiles.map(p => ({
+        state.profiles = data.profiles.slice(0, 3).map(p => ({
           id: p.id,
           name: p.name || '',
           imgUrl: p.imgUrl || '',
