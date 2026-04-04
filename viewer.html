@@ -82,11 +82,42 @@
 
     .viewer-preview-header i { color: #4A90D9; }
 
+    .viewer-preview-header .save-btn {
+      margin-left: auto;
+      background: #4A90D9;
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      padding: 0.25rem 0.7rem;
+      font-size: 0.75rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+      transition: background 0.15s;
+      text-transform: none;
+      letter-spacing: 0;
+    }
+
+    .viewer-preview-header .save-btn:hover { background: #3a7bc8; }
+    .viewer-preview-header .save-btn:disabled { opacity: 0.5; cursor: default; }
+
     #previewFrame {
       flex: 1;
       width: 100%;
       border: none;
       overflow: auto;
+    }
+
+    /* 캡처용 숨겨진 컨테이너 */
+    #captureContainer {
+      position: fixed;
+      left: -9999px;
+      top: 0;
+      width: 800px;
+      background: #fff;
+      z-index: -1;
     }
 
     /* Mobile viewer tabs */
@@ -149,19 +180,24 @@
       <div class="viewer-preview" id="viewerPreviewPanel">
         <div class="viewer-preview-header">
           <i class="fa-solid fa-eye"></i> 미리보기 (실시간)
+          <button class="save-btn" onclick="savePreviewImage()" id="saveImageBtn">
+            <i class="fa-solid fa-image"></i> 이미지 저장
+          </button>
         </div>
-        <!-- sandbox="allow-scripts" only: scripts run in null origin, cannot access parent context -->
         <iframe id="previewFrame" sandbox="allow-scripts"></iframe>
       </div>
     </div>
   </div>
 
+  <!-- 캡처용 숨겨진 컨테이너 -->
+  <div id="captureContainer"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
   <script>
     const htmlInput = document.getElementById('htmlInput');
     const previewFrame = document.getElementById('previewFrame');
 
     function updatePreview() {
-      // Use srcdoc for safe sandboxed rendering — user HTML is intentionally rendered
       previewFrame.srcdoc = htmlInput.value;
     }
 
@@ -178,6 +214,46 @@
         preview.removeAttribute('data-hidden');
         updatePreview();
       }
+    }
+
+    function savePreviewImage() {
+      const code = htmlInput.value.trim();
+      if (!code) {
+        alert('먼저 HTML 코드를 입력해 주세요.');
+        return;
+      }
+
+      const btn = document.getElementById('saveImageBtn');
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 캡처 중...';
+
+      const container = document.getElementById('captureContainer');
+      // style 태그와 body 내용을 분리해서 처리
+      container.innerHTML = code;
+
+      // 렌더링 대기 후 캡처
+      requestAnimationFrame(() => {
+        setTimeout(() => {
+          html2canvas(container, {
+            scale: 2,
+            backgroundColor: '#ffffff',
+            useCORS: true,
+            width: 800,
+            windowWidth: 800,
+          }).then(canvas => {
+            const a = document.createElement('a');
+            a.href = canvas.toDataURL('image/png');
+            a.download = 'html-viewer-preview.png';
+            a.click();
+          }).catch(() => {
+            alert('이미지 저장 중 오류가 발생했습니다.');
+          }).finally(() => {
+            container.innerHTML = '';
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fa-solid fa-image"></i> 이미지 저장';
+          });
+        }, 300); // 이미지/폰트 로딩 대기
+      });
     }
 
     // Initialize with empty preview
