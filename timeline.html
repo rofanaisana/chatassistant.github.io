@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>세로형 연표 도구 — 소설 창작 보조 도구</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <div class="page-wrapper">
+    <!-- Header -->
+    <header class="page-header">
+      <a href="index.html" class="back-link">
+        <i class="fa-solid fa-chevron-left"></i> 메인으로
+      </a>
+      <h1>📅 세로형 연표 도구</h1>
+    </header>
+
+    <!-- Mobile Tabs -->
+    <div class="mobile-tabs">
+      <button class="mobile-tab-btn active" data-tab="editor" onclick="switchTab('editor')">
+        <i class="fa-solid fa-pen-to-square"></i> 편집
+      </button>
+      <button class="mobile-tab-btn" data-tab="preview" onclick="switchTab('preview')">
+        <i class="fa-solid fa-eye"></i> 미리보기
+      </button>
+    </div>
+
+    <div class="split-layout">
+      <!-- ===== LEFT: EDITOR ===== -->
+      <div class="editor-panel" id="editorPanel">
+
+        <!-- 연표 설정 -->
+        <div class="section-block">
+          <div class="section-title"><i class="fa-solid fa-sliders"></i> 연표 설정</div>
+          <div class="form-group">
+            <label class="form-label">제목 (선택)</label>
+            <input type="text" id="timelineTitle" class="form-input" placeholder="연표 제목을 입력하세요 (생략 가능)" oninput="renderPreview()" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">연표 정렬</label>
+            <select id="alignSelect" class="form-select" onchange="renderPreview()">
+              <option value="left">좌측 정렬</option>
+              <option value="right">우측 정렬</option>
+              <option value="center">중앙 정렬</option>
+            </select>
+          </div>
+          <div class="node-row">
+            <div class="form-group">
+              <label class="form-label">배경색</label>
+              <input type="color" id="bgColor" value="#fdf8f0" oninput="renderPreview()" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">노드 연결선 색</label>
+              <input type="color" id="lineColor" value="#c8a97e" oninput="renderPreview()" />
+            </div>
+          </div>
+        </div>
+
+        <!-- 인물 프로필 -->
+        <div class="section-block">
+          <div class="section-title"><i class="fa-solid fa-address-card"></i> 인물 프로필 카드</div>
+          <div class="form-group">
+            <label class="form-label">글꼴 선택</label>
+            <select id="fontSelect" class="form-select" onchange="renderPreview()">
+              <option value="Pretendard">Pretendard (기본)</option>
+              <option value="RIDIBatang">리디바탕</option>
+              <option value="Nanum Gothic">나눔고딕</option>
+              <option value="Nanum Myeongjo">나눔명조</option>
+            </select>
+          </div>
+          <div id="profileList"></div>
+          <button class="btn btn-primary btn-sm" id="addProfileBtn" onclick="addProfile()">
+            <i class="fa-solid fa-plus"></i> 인물 추가
+          </button>
+          <div class="text-muted" style="margin-top:6px;">최대 6인</div>
+        </div>
+
+        <!-- 타임라인 노드 -->
+        <div class="section-block">
+          <div class="section-title"><i class="fa-solid fa-timeline"></i> 타임라인 노드</div>
+          <button class="btn btn-primary btn-sm" style="margin-bottom:0.9rem;" onclick="addNode()">
+            <i class="fa-solid fa-plus"></i> 노드 추가
+          </button>
+          <div id="nodeList">
+            <div class="empty-state">
+              <i class="fa-solid fa-timeline"></i>
+              <p>노드를 추가해 보세요</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- 내보내기 -->
+        <div class="export-section">
+          <div class="section-title"><i class="fa-solid fa-share-nodes"></i> 내보내기</div>
+          <div class="btn-group">
+            <button class="btn btn-secondary btn-sm" onclick="copyHTML()">
+              <i class="fa-solid fa-code"></i> HTML 복사
+            </button>
+            <button class="btn btn-secondary btn-sm" onclick="saveJSON()">
+              <i class="fa-solid fa-download"></i> JSON 저장
+            </button>
+            <button class="btn btn-secondary btn-sm" onclick="document.getElementById('loadFile').click()">
+              <i class="fa-solid fa-upload"></i> 불러오기
+            </button>
+            <button class="btn btn-primary btn-sm" onclick="saveImage()">
+              <i class="fa-solid fa-image"></i> 이미지 저장
+            </button>
+          </div>
+          <input type="file" id="loadFile" accept=".json" style="display:none" onchange="loadJSON(event)" />
+        </div>
+      </div>
+
+      <!-- ===== RIGHT: PREVIEW ===== -->
+      <div class="preview-panel" id="previewPanel">
+        <div class="preview-inner">
+          <div id="timelinePreview" class="timeline-wrapper">
+            <div id="profilesRow" class="profiles-row"></div>
+            <div id="timelineList" class="timeline-list">
+              <div class="empty-state">
+                <i class="fa-solid fa-timeline"></i>
+                <p>노드를 추가하면 여기에 표시됩니다</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+  <script src="js/timeline.js"></script>
+</body>
+</html>
