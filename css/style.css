@@ -610,12 +610,14 @@ input, textarea, select {
 
 /* ===================== PROFILE V2 (인물 관계도) ===================== */
 .profiles-row-v2 {
+  margin-bottom: 2rem;
+}
+
+.profiles-inline {
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 0;
-  margin-bottom: 2rem;
-  flex-wrap: wrap;
 }
 
 .profile-chip-v2 {
@@ -657,45 +659,62 @@ input, textarea, select {
   white-space: nowrap;
 }
 
-/* 관계 화살표 */
+/* 관계 화살표 (인접 인물 사이) */
 .relation-arrow-block {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 0 0.6rem;
+  padding: 0 0.5rem;
   gap: 0.1rem;
-  margin-bottom: 1rem; /* 이름 라인 아래까지 포함 */
+  margin-bottom: 1.1rem; /* 이름 높이만큼 올림 */
 }
 
 .relation-label {
-  font-size: 0.7rem;
+  font-size: 0.68rem;
   font-weight: 700;
   color: #555;
   white-space: nowrap;
 }
 
 .relation-arrows {
-  display: flex;
-  gap: 0.15rem;
-  font-size: 0.65rem;
-  color: #999;
+  font-size: 0.6rem;
+  color: #aaa;
+  letter-spacing: 1px;
 }
 
-/* 3인일 때 1↔3 관계 브릿지 */
+/* 3인 1↔3 관계 브릿지 */
 .relation-bridge {
-  width: 100%;
-  text-align: center;
-  margin-top: 0.4rem;
-  font-size: 0.7rem;
-  color: #888;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 0.4rem;
+  margin-top: 0.3rem;
 }
 
-.relation-bridge-names { color: #999; }
-.relation-bridge-label { font-weight: 700; color: #555; }
+.relation-bridge-line {
+  flex: 1;
+  max-width: 40px;
+  height: 1px;
+  background: #ccc;
+}
+
+.relation-bridge-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.05rem;
+}
+
+.relation-bridge-names {
+  font-size: 0.65rem;
+  color: #aaa;
+}
+
+.relation-bridge-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #555;
+}
 
 /* 에디터: 관계 설정 행 */
 .relation-row {
@@ -710,7 +729,6 @@ input, textarea, select {
   align-items: center;
   gap: 0.3rem;
   flex-shrink: 0;
-  min-width: 0;
 }
 
 .relation-name {
@@ -721,6 +739,43 @@ input, textarea, select {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* ===================== NODE SHAPE MARKER ===================== */
+.node-shape-marker {
+  position: absolute;
+  line-height: 1;
+  text-align: center;
+}
+
+/* 노드 에디터의 도트 프리뷰 (텍스트 기반) */
+.node-dot-preview {
+  width: auto !important;
+  height: auto !important;
+  border: none !important;
+  border-radius: 0 !important;
+  background: none !important;
+  flex-shrink: 0;
+}
+
+/* 타임라인 노드 padding 조정 (특수문자 마커 대응) */
+.timeline-node {
+  padding-left: 28px;
+}
+
+.timeline-node.align-right {
+  padding-left: 0;
+  padding-right: 28px;
+}
+
+.timeline-node.align-center-left {
+  padding-left: 0;
+  padding-right: calc(50% + 14px);
+}
+
+.timeline-node.align-center-right {
+  padding-left: calc(50% + 14px);
+  padding-right: 0;
 }
 
 /* ===================== CUSTOM THEME OPTIONS ===================== */
