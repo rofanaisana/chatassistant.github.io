@@ -7,15 +7,15 @@ const state = {
   nextNodeId: 1,
 };
 
-const AVATAR_COLORS = ['#4A90D9', '#e9658b', '#f5a623', '#7ed321', '#9b59b6', '#1abc9c'];
+const AVATAR_COLORS = ['#4A90D9', '#e9658b', '#f5a623'];
 const collapsedProfiles = new Set();
 
 const NODE_SHAPES = [
-  { value: 'circle', label: '● 원', icon: '●' },
-  { value: 'heart', label: '♥ 하트', icon: '♥' },
-  { value: 'star', label: '★ 별', icon: '★' },
-  { value: 'triangle', label: '▲ 세모', icon: '▲' },
-  { value: 'diamond', label: '◆ 마름모', icon: '◆' },
+  { value: 'circle', label: '● 원' },
+  { value: 'heart', label: '♥ 하트' },
+  { value: 'star', label: '★ 별' },
+  { value: 'triangle', label: '▲ 세모' },
+  { value: 'diamond', label: '◆ 마름모' },
 ];
 
 // ===================== INIT =====================
@@ -135,6 +135,13 @@ function updateRelation(fromId, toId, value) {
   }
 }
 
+function getRelationLabel(idA, idB) {
+  const rel = state.relations.find(r =>
+    (r.from === idA && r.to === idB) || (r.from === idB && r.to === idA)
+  );
+  return rel ? rel.label : '';
+}
+
 function renderRelationsUI() {
   const container = document.getElementById('relationsList');
   if (!container) return;
@@ -233,7 +240,6 @@ function addNode() {
     time: '',
     desc: '',
     color: '#4A90D9',
-    size: 14,
     shape: 'circle',
     centerSide: 'left',
   });
@@ -258,28 +264,15 @@ function clearAllNodes() {
 function updateNode(id, field, value) {
   const node = state.nodes.find(n => n.id === id);
   if (node) {
-    if (field === 'size') {
-      node[field] = parseInt(value, 10) || 14;
-    } else {
-      node[field] = value;
-    }
-    if (field === 'color' || field === 'size' || field === 'shape') {
-      // 도트 프리뷰 업데이트
+    node[field] = value;
+    if (field === 'color' || field === 'shape') {
       const item = document.querySelector(`.node-item[data-id="${id}"]`);
       if (item) {
         const dot = item.querySelector('.node-dot-preview');
-        if (dot) {
-          updateDotPreview(dot, node);
-        }
-        if (field === 'size') {
-          const label = item.querySelector('.size-label');
-          if (label) label.textContent = `${value}px`;
-        }
+        if (dot) updateDotPreview(dot, node);
       }
     }
-    if (field === 'centerSide') {
-      renderNodes();
-    }
+    if (field === 'centerSide') renderNodes();
     renderPreview();
   }
 }
@@ -288,8 +281,6 @@ function updateDotPreview(dot, node) {
   const shapeInfo = getShapeChar(node.shape || 'circle');
   dot.textContent = shapeInfo.char;
   dot.style.color = node.color;
-  dot.style.fontSize = `${node.size || 14}px`;
-  dot.style.lineHeight = '1';
 }
 
 function getShapeChar(shape) {
@@ -334,7 +325,7 @@ function renderNodes() {
 
     item.innerHTML = `
       <div class="node-item-header">
-        <span class="node-dot-preview" style="color:${node.color};font-size:${node.size || 14}px;line-height:1;">${shapeInfo.char}</span>
+        <span class="node-dot-preview" style="color:${node.color};font-size:14px;line-height:1;">${shapeInfo.char}</span>
         <span style="font-size:0.82rem;font-weight:700;color:#4A90D9;">노드 ${idx + 1}</span>
         <span class="drag-handle" title="드래그하여 순서 변경"><i class="fa-solid fa-grip-vertical"></i></span>
         <button class="btn-icon danger" onclick="removeNode(${node.id})" title="삭제">
@@ -364,11 +355,6 @@ function renderNodes() {
           <label class="form-label">색상</label>
           <input type="color" value="${node.color}"
             oninput="updateNode(${node.id}, 'color', this.value)" style="width:100%;height:36px;" />
-        </div>
-        <div class="form-group">
-          <label class="form-label">크기: <span class="size-label">${node.size || 14}px</span></label>
-          <input type="range" min="10" max="24" value="${node.size || 14}"
-            oninput="updateNode(${node.id}, 'size', this.value)" />
         </div>
       </div>
     `;
@@ -445,66 +431,84 @@ function renderPreview() {
 
 function renderProfilesPreview() {
   const row = document.getElementById('profilesRow');
-  if (state.profiles.length === 0) { row.innerHTML = ''; row.className = 'profiles-row-v2'; return; }
+  if (state.profiles.length === 0) { row.innerHTML = ''; return; }
 
-  row.className = 'profiles-row-v2';
-  let html = '<div class="profiles-inline">';
+  const count = state.profiles.length;
 
-  state.profiles.forEach((p, idx) => {
-    if (idx > 0) {
-      // 인접한 인물 간 관계
-      const rel = state.relations.find(r =>
-        (r.from === state.profiles[idx - 1].id && r.to === p.id) ||
-        (r.from === p.id && r.to === state.profiles[idx - 1].id)
-      );
-      const label = rel && rel.label ? esc(rel.label) : '';
-      html += `
-        <div class="relation-arrow-block">
-          ${label ? `<span class="relation-label">${label}</span>` : '<span class="relation-label" style="visibility:hidden;">·</span>'}
-          <div class="relation-arrows">
-            <span>←</span>
-            <span>→</span>
-          </div>
+  if (count === 3) {
+    // ====== 역삼각형 레이아웃 ======
+    const p0 = state.profiles[0];
+    const p1 = state.profiles[1];
+    const p2 = state.profiles[2];
+    const rel01 = getRelationLabel(p0.id, p1.id);
+    const rel12 = getRelationLabel(p1.id, p2.id);
+    const rel02 = getRelationLabel(p0.id, p2.id);
+
+    const makeAvatar = (p, idx) => {
+      const content = p.imgUrl
+        ? `<img src="${escAttr(p.imgUrl)}" />`
+        : esc(p.name.charAt(0));
+      return `
+        <div class="profile-chip-v2">
+          <div class="profile-avatar-v2" style="background:${AVATAR_COLORS[idx % AVATAR_COLORS.length]}">${content}</div>
+          <span class="profile-name-v2">${esc(p.name)}</span>
         </div>
       `;
-    }
+    };
 
-    const avatarContent = p.imgUrl
-      ? `<img src="${escAttr(p.imgUrl)}" />`
-      : esc(p.name.charAt(0));
-    html += `
-      <div class="profile-chip-v2">
-        <div class="profile-avatar-v2" style="background:${AVATAR_COLORS[idx % AVATAR_COLORS.length]}">
-          ${avatarContent}
-        </div>
-        <span class="profile-name-v2">${esc(p.name)}</span>
+    const makeArrow = (label) => `
+      <div class="relation-arrow-block">
+        ${label ? `<span class="relation-label">${esc(label)}</span>` : '<span class="relation-label-empty"></span>'}
+        <div class="relation-arrows"><span>←</span><span>→</span></div>
       </div>
     `;
-  });
 
-  html += '</div>';
-
-  // 3인일 때 1↔3 관계 (아래 브릿지)
-  if (state.profiles.length === 3) {
-    const rel13 = state.relations.find(r =>
-      (r.from === state.profiles[0].id && r.to === state.profiles[2].id) ||
-      (r.from === state.profiles[2].id && r.to === state.profiles[0].id)
-    );
-    if (rel13 && rel13.label) {
+    row.innerHTML = `
+      <div class="profiles-triangle">
+        <div class="profiles-triangle-top">
+          ${makeAvatar(p0, 0)}
+          ${makeArrow(rel01)}
+          ${makeAvatar(p1, 1)}
+        </div>
+        <div class="profiles-triangle-bottom">
+          <div class="profiles-triangle-line-left">
+            ${rel02 ? `<span class="relation-label-diagonal">${esc(rel02)}</span>` : ''}
+            <div class="relation-arrows-small"><span>↕</span></div>
+          </div>
+          ${makeAvatar(p2, 2)}
+          <div class="profiles-triangle-line-right">
+            ${rel12 ? `<span class="relation-label-diagonal">${esc(rel12)}</span>` : ''}
+            <div class="relation-arrows-small"><span>↕</span></div>
+          </div>
+        </div>
+      </div>
+    `;
+  } else {
+    // ====== 1~2인: 가로 배치 ======
+    let html = '<div class="profiles-inline">';
+    state.profiles.forEach((p, idx) => {
+      if (idx > 0) {
+        const rel = getRelationLabel(state.profiles[idx - 1].id, p.id);
+        html += `
+          <div class="relation-arrow-block">
+            ${rel ? `<span class="relation-label">${esc(rel)}</span>` : '<span class="relation-label-empty"></span>'}
+            <div class="relation-arrows"><span>←</span><span>→</span></div>
+          </div>
+        `;
+      }
+      const avatarContent = p.imgUrl
+        ? `<img src="${escAttr(p.imgUrl)}" />`
+        : esc(p.name.charAt(0));
       html += `
-        <div class="relation-bridge">
-          <span class="relation-bridge-line"></span>
-          <span class="relation-bridge-content">
-            <span class="relation-bridge-names">${esc(state.profiles[0].name)} ↔ ${esc(state.profiles[2].name)}</span>
-            <span class="relation-bridge-label">${esc(rel13.label)}</span>
-          </span>
-          <span class="relation-bridge-line"></span>
+        <div class="profile-chip-v2">
+          <div class="profile-avatar-v2" style="background:${AVATAR_COLORS[idx % AVATAR_COLORS.length]}">${avatarContent}</div>
+          <span class="profile-name-v2">${esc(p.name)}</span>
         </div>
       `;
-    }
+    });
+    html += '</div>';
+    row.innerHTML = html;
   }
-
-  row.innerHTML = html;
 }
 
 function renderTimelinePreview() {
@@ -515,48 +519,34 @@ function renderTimelinePreview() {
   }
 
   const align = document.getElementById('alignSelect') ? document.getElementById('alignSelect').value : 'left';
-  const bgColor = sanitizeColor(document.getElementById('bgColor') ? document.getElementById('bgColor').value : '', '#fdf8f0');
   const lineColor = sanitizeColor(document.getElementById('lineColor') ? document.getElementById('lineColor').value : '', '#c8a97e');
   const timeTextColor = sanitizeColor(document.getElementById('timeTextColor') ? document.getElementById('timeTextColor').value : '', '#4A90D9');
   const descTextColor = sanitizeColor(document.getElementById('descTextColor') ? document.getElementById('descTextColor').value : '', '#555555');
   const lastIdx = state.nodes.length - 1;
   const defaultGap = 40;
+  const markerSize = 14; // 고정 크기
 
   let html = '';
 
   state.nodes.forEach((node, idx) => {
     const isLast = idx === lastIdx;
-    const dotSize = node.size || 14;
     const gap = isLast ? 0 : defaultGap;
     const shape = node.shape || 'circle';
     const shapeInfo = getShapeChar(shape);
-
-    // 마지막 노드는 채워진 문자, 나머지는 비어있는 문자
     const shapeChar = isLast ? shapeInfo.char : shapeInfo.outline;
+    const nodeColor = sanitizeColor(node.color, '#4A90D9');
 
     let alignClass = '';
-    let markerStyle = '';
-
     if (align === 'right') {
       alignClass = ' align-right';
-      markerStyle = `position:absolute;right:0;top:0;font-size:${dotSize}px;line-height:1;color:${sanitizeColor(node.color, '#4A90D9')};`;
     } else if (align === 'center') {
       const side = node.centerSide || 'left';
-      if (side === 'left') {
-        alignClass = ' align-center-left';
-        markerStyle = `position:absolute;right:calc(50% - ${dotSize / 2}px);top:0;font-size:${dotSize}px;line-height:1;color:${sanitizeColor(node.color, '#4A90D9')};`;
-      } else {
-        alignClass = ' align-center-right';
-        markerStyle = `position:absolute;left:calc(50% - ${dotSize / 2}px);top:0;font-size:${dotSize}px;line-height:1;color:${sanitizeColor(node.color, '#4A90D9')};`;
-      }
-    } else {
-      // left (기본)
-      markerStyle = `position:absolute;left:0;top:0;font-size:${dotSize}px;line-height:1;color:${sanitizeColor(node.color, '#4A90D9')};`;
+      alignClass = side === 'left' ? ' align-center-left' : ' align-center-right';
     }
 
     html += `
       <div class="timeline-node${alignClass}" style="padding-bottom:${isLast ? 0 : gap}px;">
-        <span class="node-shape-marker" style="${markerStyle}">${shapeChar}</span>
+        <span class="node-shape-marker" style="color:${nodeColor};">${shapeChar}</span>
         <div class="node-time" style="color:${timeTextColor};">${esc(node.time || '시점')}</div>
         <div class="node-desc" style="color:${descTextColor};">${escDesc(node.desc || '')}</div>
       </div>
@@ -564,25 +554,18 @@ function renderTimelinePreview() {
   });
 
   // 연결선 위치
-  let lineLeft = '6px';
-  let lineRight = 'auto';
-  let lineTransform = '';
-  if (align === 'right') { lineLeft = 'auto'; lineRight = '6px'; }
-  else if (align === 'center') { lineLeft = '50%'; lineRight = 'auto'; lineTransform = 'transform:translateX(-50%);'; }
+  let linePos = '';
+  if (align === 'right') {
+    linePos = `right:5px;`;
+  } else if (align === 'center') {
+    linePos = `left:50%;transform:translateX(-50%);`;
+  } else {
+    linePos = `left:5px;`;
+  }
 
   list.innerHTML = `
     <div style="position:relative;">
-      <div style="
-        position:absolute;
-        left:${lineLeft};
-        right:${lineRight};
-        top:8px;
-        width:2px;
-        background:${lineColor};
-        height:calc(100% - 16px);
-        border-radius:2px;
-        ${lineTransform}
-      "></div>
+      <div class="timeline-vertical-line" style="${linePos}background:${lineColor};"></div>
       ${html}
     </div>
   `;
@@ -591,14 +574,47 @@ function renderTimelinePreview() {
 // ===================== EXPORT =====================
 function copyHTML() {
   const preview = document.getElementById('timelinePreview');
-  const html = `<!DOCTYPE html>\n<html lang="ko">\n<head>\n<meta charset="UTF-8"/>\n<meta name="viewport" content="width=device-width,initial-scale=1.0"/>\n<title>연표</title>\n<style>\nbody{font-family:'Noto Sans KR',-apple-system,sans-serif;background:#f5f7fa;display:flex;justify-content:center;padding:2rem;}\n.timeline-wrapper{background:#fdf8f0;border-radius:16px;padding:2rem 1.5rem;box-shadow:0 4px 30px rgba(0,0,0,0.1);max-width:640px;width:100%;}\n.timeline-title{text-align:center;font-size:1.3rem;font-weight:700;color:#333;margin-bottom:1.5rem;}\n.profiles-row-v2{margin-bottom:2rem;}\n.profiles-inline{display:flex;align-items:center;justify-content:center;gap:0;}\n.profile-chip-v2{display:flex;flex-direction:column;align-items:center;gap:0.3rem;}\n.profile-avatar-v2{width:48px;height:48px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1rem;font-weight:700;color:#fff;overflow:hidden;}\n.profile-avatar-v2 img{width:100%;height:100%;border-radius:50%;object-fit:cover;}\n.profile-name-v2{font-size:0.78rem;font-weight:600;color:#333;text-align:center;}\n.relation-arrow-block{display:flex;flex-direction:column;align-items:center;padding:0 0.5rem;gap:0.1rem;margin-bottom:1.1rem;}\n.relation-label{font-size:0.68rem;font-weight:700;color:#555;}\n.relation-arrows{font-size:0.6rem;color:#aaa;letter-spacing:1px;}\n.relation-bridge{display:flex;align-items:center;justify-content:center;gap:0.4rem;margin-top:0.3rem;}\n.relation-bridge-line{flex:1;max-width:40px;height:1px;background:#ccc;}\n.relation-bridge-content{display:flex;flex-direction:column;align-items:center;gap:0.05rem;}\n.relation-bridge-names{font-size:0.65rem;color:#aaa;}\n.relation-bridge-label{font-size:0.7rem;font-weight:700;color:#555;}\n.timeline-list{position:relative;}\n.timeline-node{position:relative;padding-left:28px;display:flex;flex-direction:column;text-align:left;}\n.timeline-node.align-right{padding-left:0;padding-right:28px;text-align:right;}\n.timeline-node.align-center-left{padding-left:0;padding-right:calc(50% + 14px);text-align:right;}\n.timeline-node.align-center-right{padding-right:0;padding-left:calc(50% + 14px);text-align:left;}\n.node-shape-marker{position:absolute;line-height:1;}\n.node-time{font-size:0.85rem;font-weight:700;margin-bottom:0.25rem;}\n.node-desc{font-size:0.88rem;line-height:1.65;white-space:pre-wrap;word-break:break-word;}\n</style>\n</head>\n<body>\n${preview.outerHTML}\n</body>\n</html>`;
+  const cssText = `
+body{font-family:'Noto Sans KR',-apple-system,sans-serif;background:#f5f7fa;display:flex;justify-content:center;padding:2rem;}
+.timeline-wrapper{background:#fdf8f0;border-radius:16px;padding:2rem 1.5rem;box-shadow:0 4px 30px rgba(0,0,0,0.1);max-width:640px;width:100%;}
+.timeline-title{text-align:center;font-size:1.3rem;font-weight:700;color:#333;margin-bottom:1.5rem;}
+.profiles-inline{display:flex;align-items:center;justify-content:center;}
+.profile-chip-v2{display:flex;flex-direction:column;align-items:center;gap:0.3rem;}
+.profile-avatar-v2{width:48px;height:48px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1rem;font-weight:700;color:#fff;overflow:hidden;}
+.profile-avatar-v2 img{width:100%;height:100%;border-radius:50%;object-fit:cover;}
+.profile-name-v2{font-size:0.78rem;font-weight:600;color:#333;text-align:center;}
+.relation-arrow-block{display:flex;flex-direction:column;align-items:center;padding:0 0.5rem;gap:0.1rem;margin-bottom:1.1rem;}
+.relation-label{font-size:0.68rem;font-weight:700;color:#555;}
+.relation-label-empty{height:0.68rem;}
+.relation-arrows{font-size:0.6rem;color:#aaa;letter-spacing:1px;}
+.profiles-triangle{display:flex;flex-direction:column;align-items:center;gap:0.3rem;margin-bottom:2rem;}
+.profiles-triangle-top{display:flex;align-items:center;justify-content:center;}
+.profiles-triangle-bottom{display:flex;align-items:flex-start;justify-content:center;gap:0.8rem;margin-top:0.2rem;}
+.profiles-triangle-line-left,.profiles-triangle-line-right{display:flex;flex-direction:column;align-items:center;gap:0.05rem;padding-top:0.2rem;}
+.relation-label-diagonal{font-size:0.65rem;font-weight:700;color:#555;}
+.relation-arrows-small{font-size:0.55rem;color:#aaa;}
+.timeline-list{position:relative;}
+.timeline-vertical-line{position:absolute;top:7px;width:2px;height:calc(100% - 14px);border-radius:2px;}
+.timeline-node{position:relative;padding-left:24px;display:flex;flex-direction:column;text-align:left;}
+.timeline-node.align-right{padding-left:0;padding-right:24px;text-align:right;}
+.timeline-node.align-center-left{padding-left:0;padding-right:calc(50% + 14px);text-align:right;}
+.timeline-node.align-center-right{padding-right:0;padding-left:calc(50% + 14px);text-align:left;}
+.node-shape-marker{position:absolute;font-size:14px;line-height:1;width:14px;text-align:center;}
+.timeline-node .node-shape-marker{left:-1px;top:2px;}
+.timeline-node.align-right .node-shape-marker{left:auto;right:-1px;}
+.timeline-node.align-center-left .node-shape-marker{left:auto;right:calc(50% - 7px);}
+.timeline-node.align-center-right .node-shape-marker{left:calc(50% - 7px);right:auto;}
+.node-time{font-size:0.85rem;font-weight:700;margin-bottom:0.25rem;}
+.node-desc{font-size:0.88rem;line-height:1.65;white-space:pre-wrap;word-break:break-word;}
+  `.trim();
+  const html = `<!DOCTYPE html>\n<html lang="ko">\n<head>\n<meta charset="UTF-8"/>\n<meta name="viewport" content="width=device-width,initial-scale=1.0"/>\n<title>연표</title>\n<style>\n${cssText}\n</style>\n</head>\n<body>\n${preview.outerHTML}\n</body>\n</html>`;
   navigator.clipboard.writeText(html).then(() => alert('HTML이 클립보드에 복사되었습니다!'))
     .catch(() => { const ta = document.createElement('textarea'); ta.value = html; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta); alert('HTML이 클립보드에 복사되었습니다!'); });
 }
 
 function saveJSON() {
   const data = {
-    version: 4,
+    version: 5,
     profiles: state.profiles,
     nodes: state.nodes,
     relations: state.relations,
@@ -624,18 +640,15 @@ function loadJSON(event) {
     try {
       const data = JSON.parse(e.target.result);
       if (data.profiles) {
-        state.profiles = data.profiles.map(p => ({
-          id: p.id, name: p.name || '', imgUrl: p.imgUrl || ''
-        }));
+        state.profiles = data.profiles.map(p => ({ id: p.id, name: p.name || '', imgUrl: p.imgUrl || '' }));
         collapsedProfiles.clear();
         data.profiles.forEach(p => collapsedProfiles.add(p.id));
       }
       if (data.nodes) {
         state.nodes = data.nodes.map(n => ({
-          ...n,
+          id: n.id, time: n.time || '', desc: n.desc || '',
+          color: n.color || '#4A90D9', shape: n.shape || 'circle',
           centerSide: n.centerSide || 'left',
-          shape: n.shape || 'circle',
-          size: n.size || 14,
         }));
       }
       if (data.relations) { state.relations = data.relations; } else { rebuildRelations(); }
