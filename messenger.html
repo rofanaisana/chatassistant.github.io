@@ -9,7 +9,6 @@
 </head>
 <body class="split-page">
   <div class="page-wrapper">
-    <!-- Header -->
     <header class="page-header">
       <a href="index.html" class="back-link">
         <i class="fa-solid fa-chevron-left"></i> 메인으로
@@ -17,7 +16,6 @@
       <h1>📱 메신저 대화</h1>
     </header>
 
-    <!-- Mobile Tabs -->
     <div class="mobile-tabs">
       <button class="mobile-tab-btn active" data-tab="editor" onclick="switchTab('editor')">
         <i class="fa-solid fa-pen-to-square"></i> 편집
@@ -28,16 +26,13 @@
     </div>
 
     <div class="split-layout">
-      <!-- ===== LEFT: EDITOR ===== -->
       <div class="editor-panel" id="editorPanel">
 
-        <!-- 채팅방 설정 -->
         <div class="form-group" style="padding:0.85rem 1.4rem 0;">
           <label class="form-label">채팅방 이름</label>
           <input type="text" id="roomName" class="form-input" placeholder="채팅방 이름 입력" value="우리의 이야기" oninput="renderPreview()" />
         </div>
 
-        <!-- 테마 & 글꼴 accordion -->
         <div class="accordion-section" id="accordionTheme">
           <div class="accordion-header" onclick="toggleAccordion('accordionTheme')">
             <span class="accordion-title"><i class="fa-solid fa-palette"></i> 테마 & 글꼴</span>
@@ -56,34 +51,13 @@
               </select>
             </div>
             <div id="customThemeOptions">
-              <div class="color-picker-row">
-                <label>배경색</label>
-                <input type="color" id="customBg" value="#f0f2f5" oninput="renderPreview()" />
-              </div>
-              <div class="color-picker-row">
-                <label>좌측 말풍선색</label>
-                <input type="color" id="customLeftBubble" value="#e8f4fe" oninput="renderPreview()" />
-              </div>
-              <div class="color-picker-row">
-                <label>좌측 글자색</label>
-                <input type="color" id="customLeftText" value="#222222" oninput="renderPreview()" />
-              </div>
-              <div class="color-picker-row">
-                <label>우측 말풍선색</label>
-                <input type="color" id="customRightBubble" value="#c8e6ff" oninput="renderPreview()" />
-              </div>
-              <div class="color-picker-row">
-                <label>우측 글자색</label>
-                <input type="color" id="customRightText" value="#1a2c3d" oninput="renderPreview()" />
-              </div>
-              <div class="color-picker-row">
-                <label>헤더 배경색</label>
-                <input type="color" id="customHeaderBg" value="#4A90D9" oninput="renderPreview()" />
-              </div>
-              <div class="color-picker-row">
-                <label>헤더 글자색</label>
-                <input type="color" id="customHeaderText" value="#ffffff" oninput="renderPreview()" />
-              </div>
+              <div class="color-picker-row"><label>배경색</label><input type="color" id="customBg" value="#f0f2f5" oninput="renderPreview()" /></div>
+              <div class="color-picker-row"><label>좌측 말풍선색</label><input type="color" id="customLeftBubble" value="#e8f4fe" oninput="renderPreview()" /></div>
+              <div class="color-picker-row"><label>좌측 글자색</label><input type="color" id="customLeftText" value="#222222" oninput="renderPreview()" /></div>
+              <div class="color-picker-row"><label>우측 말풍선색</label><input type="color" id="customRightBubble" value="#c8e6ff" oninput="renderPreview()" /></div>
+              <div class="color-picker-row"><label>우측 글자색</label><input type="color" id="customRightText" value="#1a2c3d" oninput="renderPreview()" /></div>
+              <div class="color-picker-row"><label>헤더 배경색</label><input type="color" id="customHeaderBg" value="#4A90D9" oninput="renderPreview()" /></div>
+              <div class="color-picker-row"><label>헤더 글자색</label><input type="color" id="customHeaderText" value="#ffffff" oninput="renderPreview()" /></div>
             </div>
             <div class="form-group" style="margin-top:0.6rem;">
               <label class="form-label">글꼴 선택</label>
@@ -97,7 +71,6 @@
           </div>
         </div>
 
-        <!-- 캐릭터 설정 accordion -->
         <div class="accordion-section" id="accordionCharacter">
           <div class="accordion-header" onclick="toggleAccordion('accordionCharacter')">
             <span class="accordion-title"><i class="fa-solid fa-users"></i> 캐릭터 설정</span>
@@ -112,7 +85,6 @@
           </div>
         </div>
 
-        <!-- 대화 편집 accordion -->
         <div class="accordion-section" id="accordionMessages">
           <div class="accordion-header" onclick="toggleAccordion('accordionMessages')">
             <span class="accordion-title"><i class="fa-solid fa-list"></i> 대화 내용 편집</span>
@@ -123,8 +95,11 @@
               <button class="btn btn-primary btn-sm" onclick="addMessage('chat')">
                 <i class="fa-solid fa-comment"></i> 대사 추가
               </button>
-              <button class="btn btn-success btn-sm" onclick="addMessage('scene')">
-                <i class="fa-solid fa-location-dot"></i> 장면 설명 추가
+              <button class="btn btn-warning btn-sm" onclick="addMessage('scene')">
+                <i class="fa-solid fa-bell"></i> 시스템 메시지 추가
+              </button>
+              <button class="btn btn-danger btn-sm" onclick="clearAllMessages()">
+                <i class="fa-solid fa-trash"></i> 전체삭제
               </button>
             </div>
             <div id="messageList">
@@ -136,28 +111,18 @@
           </div>
         </div>
 
-        <!-- 내보내기 -->
         <div class="export-section">
           <div class="section-title"><i class="fa-solid fa-share-nodes"></i> 내보내기</div>
           <div class="btn-group">
-            <button class="btn btn-secondary btn-sm" onclick="copyHTML()">
-              <i class="fa-solid fa-code"></i> HTML 복사
-            </button>
-            <button class="btn btn-secondary btn-sm" onclick="saveJSON()">
-              <i class="fa-solid fa-download"></i> JSON 저장
-            </button>
-            <button class="btn btn-secondary btn-sm" onclick="document.getElementById('loadFile').click()">
-              <i class="fa-solid fa-upload"></i> 불러오기
-            </button>
-            <button class="btn btn-primary btn-sm" onclick="saveImage()">
-              <i class="fa-solid fa-image"></i> 이미지 저장
-            </button>
+            <button class="btn btn-secondary btn-sm" onclick="copyHTML()"><i class="fa-solid fa-code"></i> HTML 복사</button>
+            <button class="btn btn-secondary btn-sm" onclick="saveJSON()"><i class="fa-solid fa-download"></i> JSON 저장</button>
+            <button class="btn btn-secondary btn-sm" onclick="document.getElementById('loadFile').click()"><i class="fa-solid fa-upload"></i> 불러오기</button>
+            <button class="btn btn-primary btn-sm" onclick="saveImage()"><i class="fa-solid fa-image"></i> 이미지 저장</button>
           </div>
           <input type="file" id="loadFile" accept=".json" style="display:none" onchange="loadJSON(event)" />
         </div>
       </div>
 
-      <!-- ===== RIGHT: PREVIEW ===== -->
       <div class="preview-panel" id="previewPanel">
         <div class="preview-inner">
           <div id="messengerPreviewWrap" class="theme-kakao">
