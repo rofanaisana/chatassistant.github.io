@@ -247,7 +247,7 @@ function renderMessages() {
       ? `<select class="form-select" style="flex:1;min-width:0;" onchange="updateMessage(${msg.id}, 'charId', this.value)">
           ${state.characters.map(c => `<option value="${c.id}" ${c.id === msg.charId ? 'selected' : ''}>${esc(c.name)}</option>`).join('')}
         </select>`
-      : `<span class="text-muted" style="flex:1;font-size:0.82rem;">시스템 메시지 (발화자 없음)</span>`;
+      : `<span class="text-muted" style="flex:1;font-size:0.82rem;">시스템 메시지</span>`;
 
     const placeholder = msg.type === 'scene' ? '시스템 메시지를 입력하세요' : '대사를 입력하세요';
     const isFirst = idx === 0;
