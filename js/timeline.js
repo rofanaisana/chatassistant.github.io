@@ -247,11 +247,11 @@ function updateProfileBtn() {
 // ===================== NODE SHAPES =====================
 function getShapeChar(shape) {
   const map = {
-    circle: { char: '●', outline: '○' },
-    heart: { char: '♥', outline: '♡' },
-    star: { char: '★', outline: '☆' },
-    triangle: { char: '▲', outline: '△' },
-    diamond: { char: '◆', outline: '◇' },
+    circle: { char: '●', outline: '●' },
+    heart: { char: '♥', outline: '♥' },
+    star: { char: '★', outline: '★' },
+    triangle: { char: '▲', outline: '▲' },
+    diamond: { char: '◆', outline: '◆' },
   };
   return map[shape] || map.circle;
 }
