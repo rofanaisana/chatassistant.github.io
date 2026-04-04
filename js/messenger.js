@@ -449,9 +449,17 @@ function loadJSON(event) {
       const data = JSON.parse(e.target.result);
       if (data.characters) state.characters = data.characters;
       if (data.messages) {
-        // Filter out 'action' type messages (removed feature)
-        const actionCount = data.messages.filter(m => m.type === 'action').length;
-        state.messages = data.messages.filter(m => m.type !== 'action');
+        // Filter out 'action' type messages (removed feature) in a single pass
+        const filtered = [];
+        let actionCount = 0;
+        data.messages.forEach(m => {
+          if (m.type === 'action') {
+            actionCount++;
+          } else {
+            filtered.push(m);
+          }
+        });
+        state.messages = filtered;
         if (actionCount > 0) {
           console.warn(`불러오기: '지문(action)' 타입 메시지 ${actionCount}개가 제거되었습니다 (지원 종료된 기능).`);
         }

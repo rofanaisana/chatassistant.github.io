@@ -107,7 +107,7 @@
       .viewer-editor[data-hidden="true"] {
         display: none;
       }
-      .viewer-preview[data-hidden="false"] {
+      .viewer-preview:not([data-hidden]) {
         display: flex;
       }
     }
@@ -150,7 +150,8 @@
         <div class="viewer-preview-header">
           <i class="fa-solid fa-eye"></i> 미리보기 (실시간)
         </div>
-        <iframe id="previewFrame" sandbox="allow-scripts allow-same-origin"></iframe>
+        <!-- sandbox="allow-scripts" only: scripts run in null origin, cannot access parent context -->
+        <iframe id="previewFrame" sandbox="allow-scripts"></iframe>
       </div>
     </div>
   </div>
@@ -160,11 +161,8 @@
     const previewFrame = document.getElementById('previewFrame');
 
     function updatePreview() {
-      const code = htmlInput.value;
-      const doc = previewFrame.contentDocument || previewFrame.contentWindow.document;
-      doc.open();
-      doc.write(code);
-      doc.close();
+      // Use srcdoc for safe sandboxed rendering — user HTML is intentionally rendered
+      previewFrame.srcdoc = htmlInput.value;
     }
 
     function switchViewerTab(tab) {
@@ -174,10 +172,10 @@
       document.querySelector(`[data-tab="${tab}"]`).classList.add('active');
       if (tab === 'editor') {
         editor.removeAttribute('data-hidden');
-        preview.style.display = 'none';
+        preview.setAttribute('data-hidden', 'true');
       } else {
         editor.setAttribute('data-hidden', 'true');
-        preview.style.display = 'flex';
+        preview.removeAttribute('data-hidden');
         updatePreview();
       }
     }

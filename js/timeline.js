@@ -365,10 +365,10 @@ function renderTimelinePreview() {
   }
 
   const align = document.getElementById('alignSelect') ? document.getElementById('alignSelect').value : 'left';
-  const bgColor = document.getElementById('bgColor') ? document.getElementById('bgColor').value : '#fdf8f0';
-  const lineColor = document.getElementById('lineColor') ? document.getElementById('lineColor').value : '#c8a97e';
-  const timeTextColor = document.getElementById('timeTextColor') ? document.getElementById('timeTextColor').value : '#4A90D9';
-  const descTextColor = document.getElementById('descTextColor') ? document.getElementById('descTextColor').value : '#555555';
+  const bgColor = sanitizeColor(document.getElementById('bgColor') ? document.getElementById('bgColor').value : '', '#fdf8f0');
+  const lineColor = sanitizeColor(document.getElementById('lineColor') ? document.getElementById('lineColor').value : '', '#c8a97e');
+  const timeTextColor = sanitizeColor(document.getElementById('timeTextColor') ? document.getElementById('timeTextColor').value : '', '#4A90D9');
+  const descTextColor = sanitizeColor(document.getElementById('descTextColor') ? document.getElementById('descTextColor').value : '', '#555555');
   const lastIdx = state.nodes.length - 1;
 
   let html = '';
@@ -398,13 +398,13 @@ function renderTimelinePreview() {
       }
     }
 
-    const nodeBg = isLast ? node.color : bgColor;
+    const nodeBg = isLast ? sanitizeColor(node.color, '#4A90D9') : bgColor;
 
     const markerStyle = `
       width:${dotSize}px;
       height:${dotSize}px;
       background-color:${nodeBg};
-      border:2px solid ${node.color};
+      border:2px solid ${sanitizeColor(node.color, '#4A90D9')};
       top:4px;
       left:${markerLeft};
       right:${markerRight};
@@ -587,4 +587,9 @@ function escAttr(str) {
     .replace(/"/g, '&quot;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;');
+}
+
+// Sanitize color values — only allow valid hex colors to be used in inline styles
+function sanitizeColor(color, fallback) {
+  return /^#[0-9a-fA-F]{6}$/.test(String(color)) ? String(color) : fallback;
 }
