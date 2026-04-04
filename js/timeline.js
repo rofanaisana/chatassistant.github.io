@@ -15,6 +15,12 @@ document.addEventListener('DOMContentLoaded', () => {
   renderPreview();
 });
 
+// ===================== ACCORDION =====================
+function toggleAccordion(id) {
+  const section = document.getElementById(id);
+  if (section) section.classList.toggle('collapsed');
+}
+
 // ===================== MOBILE TABS =====================
 function switchTab(tab) {
   const editor = document.getElementById('editorPanel');
@@ -58,7 +64,6 @@ function updateProfile(id, field, value) {
     }
     profile[field] = value;
     renderPreview();
-    // Update char counter without full re-render
     if (field === 'desc') {
       const counter = document.getElementById(`descCount-${id}`);
       if (counter) counter.textContent = `${value.length}/30`;
@@ -100,17 +105,17 @@ function renderProfiles() {
   list.innerHTML = '';
   state.profiles.forEach((profile, idx) => {
     const card = document.createElement('div');
-    card.className = 'profile-card';
+    card.className = 'character-card';
     const avatarPreview = profile.imgUrl
       ? `<img src="${escAttr(profile.imgUrl)}" style="width:28px;height:28px;border-radius:50%;object-fit:cover;" />`
       : esc(profile.name.charAt(0));
     card.innerHTML = `
-      <div class="profile-card-header">
+      <div class="character-card-header">
         <div style="display:flex;align-items:center;gap:0.5rem;">
           <div class="profile-avatar" style="background:${AVATAR_COLORS[idx % AVATAR_COLORS.length]};width:28px;height:28px;font-size:0.7rem;">
             ${avatarPreview}
           </div>
-          <span style="font-size:0.82rem;font-weight:700;color:#4A90D9;">인물 ${idx + 1}</span>
+          <span class="character-num">인물 ${idx + 1}</span>
         </div>
         <button class="btn-icon danger" onclick="removeProfile(${profile.id})" title="삭제">
           <i class="fa-solid fa-xmark"></i>
@@ -170,6 +175,14 @@ function removeNode(id) {
   renderPreview();
 }
 
+function clearAllNodes() {
+  if (state.nodes.length === 0) return;
+  if (!confirm('타임라인 노드를 모두 삭제하시겠습니까?')) return;
+  state.nodes = [];
+  renderNodes();
+  renderPreview();
+}
+
 function updateNode(id, field, value) {
   const node = state.nodes.find(n => n.id === id);
   if (node) {
@@ -178,7 +191,6 @@ function updateNode(id, field, value) {
     } else {
       node[field] = value;
     }
-    // Update color preview dot in editor
     if (field === 'color' || field === 'size') {
       const item = document.querySelector(`.node-item[data-id="${id}"]`);
       if (item) {
@@ -191,7 +203,6 @@ function updateNode(id, field, value) {
           dot.style.width = `${size}px`;
           dot.style.height = `${size}px`;
         }
-        // Update size label
         if (field === 'size') {
           const label = item.querySelector('.size-label');
           if (label) label.textContent = `${value}px`;
@@ -300,11 +311,9 @@ function renderPreview() {
   const previewEl = document.getElementById('timelinePreview');
   previewEl.style.fontFamily = getFontStack(font);
 
-  // Apply background color
   const bgColor = document.getElementById('bgColor') ? document.getElementById('bgColor').value : '#fdf8f0';
   previewEl.style.background = bgColor;
 
-  // Render title
   const titleInput = document.getElementById('timelineTitle');
   const titleVal = titleInput ? titleInput.value.trim() : '';
   let titleEl = document.getElementById('timelineTitleEl');
@@ -358,6 +367,8 @@ function renderTimelinePreview() {
   const align = document.getElementById('alignSelect') ? document.getElementById('alignSelect').value : 'left';
   const bgColor = document.getElementById('bgColor') ? document.getElementById('bgColor').value : '#fdf8f0';
   const lineColor = document.getElementById('lineColor') ? document.getElementById('lineColor').value : '#c8a97e';
+  const timeTextColor = document.getElementById('timeTextColor') ? document.getElementById('timeTextColor').value : '#4A90D9';
+  const descTextColor = document.getElementById('descTextColor') ? document.getElementById('descTextColor').value : '#555555';
   const lastIdx = state.nodes.length - 1;
 
   let html = '';
@@ -367,7 +378,6 @@ function renderTimelinePreview() {
     const dotSize = node.size || 10;
     const gap = isLast ? 0 : (node.gap || 40);
 
-    // Determine node alignment class and marker style
     let alignClass = '';
     let markerLeft = `${Math.round((20 - dotSize) / 2)}px`;
     let markerRight = 'auto';
@@ -403,13 +413,12 @@ function renderTimelinePreview() {
     html += `
       <div class="timeline-node${alignClass}" style="padding-bottom:${isLast ? 0 : gap}px;">
         <div class="node-marker${isLast ? ' last' : ''}" style="${markerStyle}"></div>
-        <div class="node-time" style="color:${node.color};">${esc(node.time || '시점')}</div>
-        <div class="node-desc">${escDesc(node.desc || '')}</div>
+        <div class="node-time" style="color:${timeTextColor};">${esc(node.time || '시점')}</div>
+        <div class="node-desc" style="color:${descTextColor};">${escDesc(node.desc || '')}</div>
       </div>
     `;
   });
 
-  // Line position based on alignment
   let lineLeft = '9px';
   let lineRight = 'auto';
   if (align === 'right') {
@@ -467,7 +476,7 @@ body{font-family:'Noto Sans KR',-apple-system,sans-serif;background:#f5f7fa;disp
 .node-marker{position:absolute;border-radius:50%;border:2px solid #4A90D9;background:transparent;}
 .node-marker.last{background:currentColor;border-color:currentColor;}
 .node-time{font-size:0.85rem;font-weight:700;margin-bottom:0.25rem;}
-.node-desc{font-size:0.88rem;color:#666;line-height:1.65;white-space:pre-wrap;}
+.node-desc{font-size:0.88rem;line-height:1.65;white-space:pre-wrap;}
 </style>
 </head>
 <body>
@@ -476,12 +485,11 @@ ${preview.outerHTML}
 </html>`;
   navigator.clipboard.writeText(html).then(() => alert('HTML이 클립보드에 복사되었습니다!'))
     .catch(() => {
-      // Fallback for legacy browsers that don't support clipboard API
       const ta = document.createElement('textarea');
       ta.value = html;
       document.body.appendChild(ta);
       ta.select();
-      document.execCommand('copy'); // Legacy fallback
+      document.execCommand('copy');
       document.body.removeChild(ta);
       alert('HTML이 클립보드에 복사되었습니다!');
     });
@@ -489,7 +497,7 @@ ${preview.outerHTML}
 
 function saveJSON() {
   const data = {
-    version: 1,
+    version: 2,
     profiles: state.profiles,
     nodes: state.nodes,
     nextProfileId: state.nextProfileId,
@@ -498,6 +506,8 @@ function saveJSON() {
     align: document.getElementById('alignSelect') ? document.getElementById('alignSelect').value : 'left',
     bgColor: document.getElementById('bgColor') ? document.getElementById('bgColor').value : '#fdf8f0',
     lineColor: document.getElementById('lineColor') ? document.getElementById('lineColor').value : '#c8a97e',
+    timeTextColor: document.getElementById('timeTextColor') ? document.getElementById('timeTextColor').value : '#4A90D9',
+    descTextColor: document.getElementById('descTextColor') ? document.getElementById('descTextColor').value : '#555555',
     title: document.getElementById('timelineTitle') ? document.getElementById('timelineTitle').value : '',
   };
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
@@ -523,6 +533,8 @@ function loadJSON(event) {
       if (data.align && document.getElementById('alignSelect')) document.getElementById('alignSelect').value = data.align;
       if (data.bgColor && document.getElementById('bgColor')) document.getElementById('bgColor').value = data.bgColor;
       if (data.lineColor && document.getElementById('lineColor')) document.getElementById('lineColor').value = data.lineColor;
+      if (data.timeTextColor && document.getElementById('timeTextColor')) document.getElementById('timeTextColor').value = data.timeTextColor;
+      if (data.descTextColor && document.getElementById('descTextColor')) document.getElementById('descTextColor').value = data.descTextColor;
       if (data.title !== undefined && document.getElementById('timelineTitle')) document.getElementById('timelineTitle').value = data.title;
       renderProfiles();
       renderNodes();

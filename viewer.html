@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HTML 뷰어 — Chat Backup</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+  <link rel="stylesheet" href="css/style.css" />
+  <style>
+    .viewer-layout {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      height: calc(100vh - 57px);
+      overflow: hidden;
+    }
+
+    .viewer-editor {
+      background: #1e1e2e;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      border-right: 1px solid #333;
+    }
+
+    .viewer-editor-header {
+      padding: 0.5rem 1rem;
+      background: #2a2a3e;
+      color: #aaa;
+      font-size: 0.78rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      flex-shrink: 0;
+    }
+
+    .viewer-editor-header i { color: #4A90D9; }
+
+    #htmlInput {
+      flex: 1;
+      width: 100%;
+      background: #1e1e2e;
+      color: #cdd6f4;
+      border: none;
+      outline: none;
+      font-family: 'Fira Code', 'Cascadia Code', 'Consolas', 'Monaco', monospace;
+      font-size: 0.88rem;
+      line-height: 1.7;
+      padding: 1rem;
+      resize: none;
+      overflow-y: auto;
+      tab-size: 2;
+    }
+
+    #htmlInput::-webkit-scrollbar { width: 6px; }
+    #htmlInput::-webkit-scrollbar-track { background: #1e1e2e; }
+    #htmlInput::-webkit-scrollbar-thumb { background: #444; border-radius: 3px; }
+
+    .viewer-preview {
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      background: #fff;
+    }
+
+    .viewer-preview-header {
+      padding: 0.5rem 1rem;
+      background: #f8f9fb;
+      border-bottom: 1px solid #e8eaf0;
+      color: #999;
+      font-size: 0.78rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      flex-shrink: 0;
+    }
+
+    .viewer-preview-header i { color: #4A90D9; }
+
+    #previewFrame {
+      flex: 1;
+      width: 100%;
+      border: none;
+      overflow: auto;
+    }
+
+    /* Mobile viewer tabs */
+    @media (max-width: 768px) {
+      .viewer-layout {
+        grid-template-columns: 1fr;
+        position: relative;
+      }
+      .viewer-editor,
+      .viewer-preview {
+        position: absolute;
+        inset: 0;
+        height: 100%;
+      }
+      .viewer-preview {
+        display: none;
+      }
+      .viewer-editor[data-hidden="true"] {
+        display: none;
+      }
+      .viewer-preview[data-hidden="false"] {
+        display: flex;
+      }
+    }
+  </style>
+</head>
+<body class="split-page">
+  <div class="page-wrapper">
+    <!-- Header -->
+    <header class="page-header">
+      <a href="index.html" class="back-link">
+        <i class="fa-solid fa-chevron-left"></i> 메인으로
+      </a>
+      <h1>🖥️ HTML 뷰어</h1>
+    </header>
+
+    <!-- Mobile Tabs -->
+    <div class="mobile-tabs">
+      <button class="mobile-tab-btn active" data-tab="editor" onclick="switchViewerTab('editor')">
+        <i class="fa-solid fa-code"></i> 코드
+      </button>
+      <button class="mobile-tab-btn" data-tab="preview" onclick="switchViewerTab('preview')">
+        <i class="fa-solid fa-eye"></i> 미리보기
+      </button>
+    </div>
+
+    <div class="viewer-layout">
+      <!-- Left: Code Editor -->
+      <div class="viewer-editor" id="viewerEditorPanel">
+        <div class="viewer-editor-header">
+          <i class="fa-solid fa-code"></i> HTML 코드 입력
+        </div>
+        <textarea id="htmlInput" placeholder="여기에 HTML 코드를 붙여넣으세요...
+예시:
+&lt;h1&gt;안녕하세요!&lt;/h1&gt;
+&lt;p style=&quot;color:red;&quot;&gt;빨간 글씨&lt;/p&gt;" oninput="updatePreview()"></textarea>
+      </div>
+
+      <!-- Right: Preview -->
+      <div class="viewer-preview" id="viewerPreviewPanel">
+        <div class="viewer-preview-header">
+          <i class="fa-solid fa-eye"></i> 미리보기 (실시간)
+        </div>
+        <iframe id="previewFrame" sandbox="allow-scripts allow-same-origin"></iframe>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const htmlInput = document.getElementById('htmlInput');
+    const previewFrame = document.getElementById('previewFrame');
+
+    function updatePreview() {
+      const code = htmlInput.value;
+      const doc = previewFrame.contentDocument || previewFrame.contentWindow.document;
+      doc.open();
+      doc.write(code);
+      doc.close();
+    }
+
+    function switchViewerTab(tab) {
+      const editor = document.getElementById('viewerEditorPanel');
+      const preview = document.getElementById('viewerPreviewPanel');
+      document.querySelectorAll('.mobile-tab-btn').forEach(btn => btn.classList.remove('active'));
+      document.querySelector(`[data-tab="${tab}"]`).classList.add('active');
+      if (tab === 'editor') {
+        editor.removeAttribute('data-hidden');
+        preview.style.display = 'none';
+      } else {
+        editor.setAttribute('data-hidden', 'true');
+        preview.style.display = 'flex';
+        updatePreview();
+      }
+    }
+
+    // Initialize with empty preview
+    updatePreview();
+  </script>
+</body>
+</html>

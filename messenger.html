@@ -3,18 +3,18 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>메신저 대화 백업 도구 — 소설 창작 보조 도구</title>
+  <title>메신저 대화 — Chat Backup</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
   <link rel="stylesheet" href="css/style.css" />
 </head>
-<body>
+<body class="split-page">
   <div class="page-wrapper">
     <!-- Header -->
     <header class="page-header">
       <a href="index.html" class="back-link">
         <i class="fa-solid fa-chevron-left"></i> 메인으로
       </a>
-      <h1>📱 메신저 대화 백업 도구</h1>
+      <h1>📱 메신저 대화</h1>
     </header>
 
     <!-- Mobile Tabs -->
@@ -32,101 +32,106 @@
       <div class="editor-panel" id="editorPanel">
 
         <!-- 채팅방 설정 -->
-        <div class="section-block">
-          <div class="section-title"><i class="fa-solid fa-comment-dots"></i> 채팅방 설정</div>
-          <div class="form-group">
-            <label class="form-label">채팅방 이름</label>
-            <input type="text" id="roomName" class="form-input" placeholder="채팅방 이름 입력" value="우리의 이야기" oninput="renderPreview()" />
+        <div class="form-group" style="padding:0.85rem 1.4rem 0;">
+          <label class="form-label">채팅방 이름</label>
+          <input type="text" id="roomName" class="form-input" placeholder="채팅방 이름 입력" value="우리의 이야기" oninput="renderPreview()" />
+        </div>
+
+        <!-- 테마 & 글꼴 accordion -->
+        <div class="accordion-section" id="accordionTheme">
+          <div class="accordion-header" onclick="toggleAccordion('accordionTheme')">
+            <span class="accordion-title"><i class="fa-solid fa-palette"></i> 테마 & 글꼴</span>
+            <i class="fa-solid fa-chevron-down accordion-toggle-icon"></i>
           </div>
-          <div class="form-group">
-            <label class="form-label">테마 선택</label>
-            <select id="themeSelect" class="form-select" onchange="onThemeChange()">
-              <option value="kakao">📲 카카오톡</option>
-              <option value="line">💚 네이버 LINE</option>
-              <option value="twitter">🐦 Twitter DM</option>
-              <option value="light">☀️ Basic Light</option>
-              <option value="dark">🌙 Basic Dark</option>
-              <option value="custom">🎨 커스텀</option>
-            </select>
-          </div>
-          <div id="customThemeOptions">
-            <div class="color-picker-row">
-              <label>배경색</label>
-              <input type="color" id="customBg" value="#f0f2f5" oninput="renderPreview()" />
+          <div class="accordion-body">
+            <div class="form-group">
+              <label class="form-label">테마 선택</label>
+              <select id="themeSelect" class="form-select" onchange="onThemeChange()">
+                <option value="kakao">📲 카카오톡</option>
+                <option value="line">💚 네이버 LINE</option>
+                <option value="twitter">🐦 Twitter DM</option>
+                <option value="light">☀️ Basic Light</option>
+                <option value="dark">🌙 Basic Dark</option>
+                <option value="custom">🎨 커스텀</option>
+              </select>
             </div>
-            <div class="color-picker-row">
-              <label>좌측 말풍선색</label>
-              <input type="color" id="customLeftBubble" value="#e8f4fe" oninput="renderPreview()" />
+            <div id="customThemeOptions">
+              <div class="color-picker-row">
+                <label>배경색</label>
+                <input type="color" id="customBg" value="#f0f2f5" oninput="renderPreview()" />
+              </div>
+              <div class="color-picker-row">
+                <label>좌측 말풍선색</label>
+                <input type="color" id="customLeftBubble" value="#e8f4fe" oninput="renderPreview()" />
+              </div>
+              <div class="color-picker-row">
+                <label>좌측 글자색</label>
+                <input type="color" id="customLeftText" value="#222222" oninput="renderPreview()" />
+              </div>
+              <div class="color-picker-row">
+                <label>우측 말풍선색</label>
+                <input type="color" id="customRightBubble" value="#c8e6ff" oninput="renderPreview()" />
+              </div>
+              <div class="color-picker-row">
+                <label>우측 글자색</label>
+                <input type="color" id="customRightText" value="#1a2c3d" oninput="renderPreview()" />
+              </div>
+              <div class="color-picker-row">
+                <label>헤더 배경색</label>
+                <input type="color" id="customHeaderBg" value="#4A90D9" oninput="renderPreview()" />
+              </div>
+              <div class="color-picker-row">
+                <label>헤더 글자색</label>
+                <input type="color" id="customHeaderText" value="#ffffff" oninput="renderPreview()" />
+              </div>
             </div>
-            <div class="color-picker-row">
-              <label>좌측 글자색</label>
-              <input type="color" id="customLeftText" value="#222222" oninput="renderPreview()" />
+            <div class="form-group" style="margin-top:0.6rem;">
+              <label class="form-label">글꼴 선택</label>
+              <select id="fontSelect" class="form-select" onchange="renderPreview()">
+                <option value="Pretendard">Pretendard (기본)</option>
+                <option value="RIDIBatang">리디바탕</option>
+                <option value="Nanum Gothic">나눔고딕</option>
+                <option value="Nanum Myeongjo">나눔명조</option>
+              </select>
             </div>
-            <div class="color-picker-row">
-              <label>우측 말풍선색</label>
-              <input type="color" id="customRightBubble" value="#c8e6ff" oninput="renderPreview()" />
-            </div>
-            <div class="color-picker-row">
-              <label>우측 글자색</label>
-              <input type="color" id="customRightText" value="#1a2c3d" oninput="renderPreview()" />
-            </div>
-            <div class="color-picker-row">
-              <label>헤더 배경색</label>
-              <input type="color" id="customHeaderBg" value="#4A90D9" oninput="renderPreview()" />
-            </div>
-          </div>
-          <div class="form-group" style="margin-top:0.6rem;">
-            <label class="form-label">글꼴 선택</label>
-            <select id="fontSelect" class="form-select" onchange="renderPreview()">
-              <option value="Pretendard">Pretendard (기본)</option>
-              <option value="RIDIBatang">리디바탕</option>
-              <option value="Nanum Gothic">나눔고딕</option>
-              <option value="Nanum Myeongjo">나눔명조</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <div class="toggle-row">
-              <span class="toggle-label">
-                <i class="fa-solid fa-pen-nib" style="color:#4A90D9;margin-right:4px;"></i>
-                지문 + 대사 모드
-              </span>
-              <label class="toggle-switch">
-                <input type="checkbox" id="actionModeToggle" checked onchange="renderPreview()" />
-                <span class="toggle-slider"></span>
-              </label>
-            </div>
-            <div class="text-muted" style="margin-top:4px;">ON: 지문+대사 / OFF: 대사만 (Only Chat)</div>
           </div>
         </div>
 
-        <!-- 캐릭터 설정 -->
-        <div class="section-block">
-          <div class="section-title"><i class="fa-solid fa-users"></i> 캐릭터 설정</div>
-          <div id="characterList"></div>
-          <button class="btn btn-primary btn-sm" id="addCharBtn" onclick="addCharacter()">
-            <i class="fa-solid fa-plus"></i> 캐릭터 추가
-          </button>
-          <div class="text-muted" style="margin-top:6px;">최소 2인 / 최대 6인</div>
+        <!-- 캐릭터 설정 accordion -->
+        <div class="accordion-section" id="accordionCharacter">
+          <div class="accordion-header" onclick="toggleAccordion('accordionCharacter')">
+            <span class="accordion-title"><i class="fa-solid fa-users"></i> 캐릭터 설정</span>
+            <i class="fa-solid fa-chevron-down accordion-toggle-icon"></i>
+          </div>
+          <div class="accordion-body">
+            <div id="characterList"></div>
+            <button class="btn btn-primary btn-sm" id="addCharBtn" onclick="addCharacter()">
+              <i class="fa-solid fa-plus"></i> 캐릭터 추가
+            </button>
+            <div class="text-muted" style="margin-top:6px;">최소 2인 / 최대 6인</div>
+          </div>
         </div>
 
-        <!-- 대화 편집 -->
-        <div class="section-block">
-          <div class="section-title"><i class="fa-solid fa-list"></i> 대화 내용 편집</div>
-          <div class="btn-group" style="margin-bottom:0.9rem;">
-            <button class="btn btn-primary btn-sm" onclick="addMessage('chat')">
-              <i class="fa-solid fa-comment"></i> 대사 추가
-            </button>
-            <button class="btn btn-warning btn-sm" id="addActionBtn" onclick="addMessage('action')">
-              <i class="fa-solid fa-pen-nib"></i> 지문 추가
-            </button>
-            <button class="btn btn-success btn-sm" onclick="addMessage('scene')">
-              <i class="fa-solid fa-location-dot"></i> 시스템 메시지 추가
-            </button>
+        <!-- 대화 편집 accordion -->
+        <div class="accordion-section" id="accordionMessages">
+          <div class="accordion-header" onclick="toggleAccordion('accordionMessages')">
+            <span class="accordion-title"><i class="fa-solid fa-list"></i> 대화 내용 편집</span>
+            <i class="fa-solid fa-chevron-down accordion-toggle-icon"></i>
           </div>
-          <div id="messageList">
-            <div class="empty-state">
-              <i class="fa-regular fa-comment-dots"></i>
-              <p>메시지를 추가해 보세요</p>
+          <div class="accordion-body">
+            <div class="btn-group" style="margin-bottom:0.9rem;">
+              <button class="btn btn-primary btn-sm" onclick="addMessage('chat')">
+                <i class="fa-solid fa-comment"></i> 대사 추가
+              </button>
+              <button class="btn btn-success btn-sm" onclick="addMessage('scene')">
+                <i class="fa-solid fa-location-dot"></i> 장면 설명 추가
+              </button>
+            </div>
+            <div id="messageList">
+              <div class="empty-state">
+                <i class="fa-regular fa-comment-dots"></i>
+                <p>메시지를 추가해 보세요</p>
+              </div>
             </div>
           </div>
         </div>

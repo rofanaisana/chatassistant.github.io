@@ -17,8 +17,13 @@ document.addEventListener('DOMContentLoaded', () => {
   renderMessages();
   renderPreview();
   initSortable();
-  updateActionBtnState();
 });
+
+// ===================== ACCORDION =====================
+function toggleAccordion(id) {
+  const section = document.getElementById(id);
+  if (section) section.classList.toggle('collapsed');
+}
 
 // ===================== MOBILE TABS =====================
 function switchTab(tab) {
@@ -54,7 +59,6 @@ function removeCharacter(id) {
     return;
   }
   state.characters = state.characters.filter(c => c.id !== id);
-  // Update messages that referenced removed character
   state.messages.forEach(m => {
     if (m.type === 'chat' && !state.characters.find(c => c.id === m.charId)) {
       m.charId = state.characters[0].id;
@@ -71,8 +75,31 @@ function updateCharInput(id, field, value) {
   if (char) {
     char[field] = value;
     renderPreview();
-    // Update dropdowns in messages
     refreshMessageSpeakers();
+  }
+}
+
+function handleCharImage(id, input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const char = state.characters.find(c => c.id === id);
+    if (char) {
+      char.imgUrl = e.target.result;
+      renderCharacters();
+      renderPreview();
+    }
+  };
+  reader.readAsDataURL(file);
+}
+
+function removeCharImage(id) {
+  const char = state.characters.find(c => c.id === id);
+  if (char) {
+    char.imgUrl = '';
+    renderCharacters();
+    renderPreview();
   }
 }
 
@@ -82,6 +109,9 @@ function renderCharacters() {
   state.characters.forEach((char, idx) => {
     const card = document.createElement('div');
     card.className = 'character-card';
+    const imgPreviewHTML = char.imgUrl
+      ? `<img src="${escAttr(char.imgUrl)}" class="char-img-preview" alt="프로필" />`
+      : `<div class="char-img-placeholder"><i class="fa-solid fa-user"></i></div>`;
     card.innerHTML = `
       <div class="character-card-header">
         <span class="character-num">캐릭터 ${idx + 1}</span>
@@ -95,9 +125,16 @@ function renderCharacters() {
           oninput="updateCharInput(${char.id}, 'name', this.value)" placeholder="캐릭터 이름" />
       </div>
       <div class="form-group">
-        <label class="form-label">프로필 이미지 URL <span class="text-muted">(선택)</span></label>
-        <input type="text" class="form-input" value="${escAttr(char.imgUrl)}"
-          oninput="updateCharInput(${char.id}, 'imgUrl', this.value)" placeholder="https://..." />
+        <label class="form-label">프로필 이미지</label>
+        <div class="char-img-upload-area">
+          ${imgPreviewHTML}
+          <button class="btn btn-secondary btn-sm" onclick="document.getElementById('charImg-${char.id}').click()" style="flex:1;">
+            <i class="fa-solid fa-camera"></i> ${char.imgUrl ? '변경' : '업로드'}
+          </button>
+          ${char.imgUrl ? `<button class="btn btn-danger btn-sm" onclick="removeCharImage(${char.id})"><i class="fa-solid fa-trash"></i></button>` : ''}
+        </div>
+        <input type="file" id="charImg-${char.id}" accept="image/*" style="display:none"
+          onchange="handleCharImage(${char.id}, this)" />
       </div>
       <div class="form-group">
         <label class="form-label">말풍선 위치</label>
@@ -125,7 +162,6 @@ function addMessage(type) {
   state.messages.push(msg);
   renderMessages();
   renderPreview();
-  // Scroll to bottom of message list
   const list = document.getElementById('messageList');
   list.scrollTop = list.scrollHeight;
 }
@@ -162,18 +198,15 @@ function renderMessages() {
 
     let badgeClass = 'badge-chat';
     let badgeText = '대사';
-    if (msg.type === 'action') { badgeClass = 'badge-action'; badgeText = '지문'; }
-    if (msg.type === 'scene') { badgeClass = 'badge-scene'; badgeText = '시스템 메시지'; }
+    if (msg.type === 'scene') { badgeClass = 'badge-scene'; badgeText = '장면 설명'; }
 
     const speakerSelect = msg.type !== 'scene'
       ? `<select class="form-select" style="flex:1;" onchange="updateMessage(${msg.id}, 'charId', this.value)">
           ${state.characters.map(c => `<option value="${c.id}" ${c.id === msg.charId ? 'selected' : ''}>${esc(c.name)}</option>`).join('')}
         </select>`
-      : `<span class="text-muted" style="flex:1;font-size:0.82rem;">시스템 메시지 (발화자 없음)</span>`;
+      : `<span class="text-muted" style="flex:1;font-size:0.82rem;">장면 설명 (발화자 없음)</span>`;
 
-    const placeholder = msg.type === 'action' ? '(행동 묘사를 입력하세요)' :
-                        msg.type === 'scene' ? '시스템 메시지를 입력하세요' :
-                        '대사를 입력하세요';
+    const placeholder = msg.type === 'scene' ? '장면 설명을 입력하세요' : '대사를 입력하세요';
 
     item.innerHTML = `
       <div class="message-item-header">
@@ -206,16 +239,6 @@ function refreshMessageSpeakers() {
   });
 }
 
-function updateActionBtnState() {
-  const toggle = document.getElementById('actionModeToggle');
-  const btn = document.getElementById('addActionBtn');
-  toggle.addEventListener('change', () => {
-    btn.disabled = !toggle.checked;
-    btn.style.opacity = toggle.checked ? '1' : '0.5';
-    renderPreview();
-  });
-}
-
 // ===================== SORTABLE =====================
 let sortable = null;
 function initSortable() {
@@ -226,7 +249,6 @@ function initSortable() {
     animation: 150,
     ghostClass: 'sortable-ghost',
     onEnd: () => {
-      // Reorder state.messages based on DOM order
       const items = list.querySelectorAll('.message-item');
       const newOrder = [];
       items.forEach(item => {
@@ -274,13 +296,17 @@ function applyCustomThemeStyles() {
   const rightBubble = document.getElementById('customRightBubble').value;
   const rightText = document.getElementById('customRightText').value;
   const headerBg = document.getElementById('customHeaderBg').value;
+  const headerText = document.getElementById('customHeaderText').value;
 
   const preview = document.getElementById('messengerPreview');
   const header = preview.querySelector('.messenger-header');
   const body = preview.querySelector('.messenger-body');
 
   preview.style.background = bg;
-  if (header) header.style.background = headerBg;
+  if (header) {
+    header.style.background = headerBg;
+    header.style.color = headerText;
+  }
 
   if (body) {
     body.querySelectorAll('.bubble-row.left .bubble-text').forEach(el => {
@@ -297,14 +323,12 @@ function applyCustomThemeStyles() {
 function renderPreview() {
   const theme = document.getElementById('themeSelect').value;
   const roomName = document.getElementById('roomName').value || '채팅방';
-  const actionMode = document.getElementById('actionModeToggle').checked;
   const font = getSelectedFont();
 
   const wrap = document.getElementById('messengerPreviewWrap');
   wrap.className = `theme-${theme}`;
   document.getElementById('previewRoomName').textContent = roomName;
 
-  // Apply font to preview only
   const previewEl = document.getElementById('messengerPreview');
   previewEl.style.fontFamily = getFontStack(font);
 
@@ -315,28 +339,24 @@ function renderPreview() {
     return;
   }
 
-  const html = state.messages.map(msg => buildMessageHTML(msg, actionMode)).join('');
+  const html = state.messages.map(msg => buildMessageHTML(msg)).join('');
   body.innerHTML = html;
 
-  // Apply custom theme inline styles after rendering
   if (theme === 'custom') {
     applyCustomThemeStyles();
   } else {
-    // Clear inline styles from custom theme
     previewEl.style.background = '';
     const header = previewEl.querySelector('.messenger-header');
-    if (header) header.style.background = '';
+    if (header) {
+      header.style.background = '';
+      header.style.color = '';
+    }
   }
 }
 
-function buildMessageHTML(msg, actionMode) {
+function buildMessageHTML(msg) {
   if (msg.type === 'scene') {
-    return `<div class="scene-block"><span class="scene-text">${esc(msg.text || '시스템 메시지')}</span></div>`;
-  }
-
-  if (msg.type === 'action') {
-    if (!actionMode) return '';
-    return `<div class="action-block"><span class="action-prefix">(지문)</span> ${esc(msg.text || '')}</div>`;
+    return `<div class="scene-block"><span class="scene-text">${esc(msg.text || '장면 설명')}</span></div>`;
   }
 
   // chat bubble
@@ -382,12 +402,11 @@ ${preview.outerHTML}
 </html>`;
   navigator.clipboard.writeText(html).then(() => alert('HTML이 클립보드에 복사되었습니다!'))
     .catch(() => {
-      // Fallback for legacy browsers that don't support clipboard API
       const ta = document.createElement('textarea');
       ta.value = html;
       document.body.appendChild(ta);
       ta.select();
-      document.execCommand('copy'); // Legacy fallback
+      document.execCommand('copy');
       document.body.removeChild(ta);
       alert('HTML이 클립보드에 복사되었습니다!');
     });
@@ -395,14 +414,13 @@ ${preview.outerHTML}
 
 function saveJSON() {
   const data = {
-    version: 1,
+    version: 2,
     characters: state.characters,
     messages: state.messages,
     nextCharId: state.nextCharId,
     nextMsgId: state.nextMsgId,
     roomName: document.getElementById('roomName').value,
     theme: document.getElementById('themeSelect').value,
-    actionMode: document.getElementById('actionModeToggle').checked,
     font: getSelectedFont(),
     customTheme: {
       bg: document.getElementById('customBg').value,
@@ -411,6 +429,7 @@ function saveJSON() {
       rightBubble: document.getElementById('customRightBubble').value,
       rightText: document.getElementById('customRightText').value,
       headerBg: document.getElementById('customHeaderBg').value,
+      headerText: document.getElementById('customHeaderText').value,
     },
   };
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
@@ -429,12 +448,18 @@ function loadJSON(event) {
     try {
       const data = JSON.parse(e.target.result);
       if (data.characters) state.characters = data.characters;
-      if (data.messages) state.messages = data.messages;
+      if (data.messages) {
+        // Filter out 'action' type messages (removed feature)
+        const actionCount = data.messages.filter(m => m.type === 'action').length;
+        state.messages = data.messages.filter(m => m.type !== 'action');
+        if (actionCount > 0) {
+          console.warn(`불러오기: '지문(action)' 타입 메시지 ${actionCount}개가 제거되었습니다 (지원 종료된 기능).`);
+        }
+      }
       if (data.nextCharId) state.nextCharId = data.nextCharId;
       if (data.nextMsgId) state.nextMsgId = data.nextMsgId;
       if (data.roomName) document.getElementById('roomName').value = data.roomName;
       if (data.theme) document.getElementById('themeSelect').value = data.theme;
-      if (data.actionMode !== undefined) document.getElementById('actionModeToggle').checked = data.actionMode;
       if (data.font) document.getElementById('fontSelect').value = data.font;
       if (data.customTheme) {
         document.getElementById('customBg').value = data.customTheme.bg || '#f0f2f5';
@@ -443,8 +468,8 @@ function loadJSON(event) {
         document.getElementById('customRightBubble').value = data.customTheme.rightBubble || '#c8e6ff';
         document.getElementById('customRightText').value = data.customTheme.rightText || '#1a2c3d';
         document.getElementById('customHeaderBg').value = data.customTheme.headerBg || '#4A90D9';
+        document.getElementById('customHeaderText').value = data.customTheme.headerText || '#ffffff';
       }
-      // Show/hide custom theme options
       const customOpts = document.getElementById('customThemeOptions');
       if (data.theme === 'custom') {
         customOpts.classList.add('visible');
@@ -497,12 +522,12 @@ function escAttr(str) {
 
 function getThemeCSS(theme) {
   const themes = {
-    kakao: `.messenger-preview{background:#B2C7D9;border-radius:16px;overflow:hidden;min-height:300px;display:flex;flex-direction:column;}.messenger-header{background:#a8bfcf;padding:1rem 1.2rem;}.messenger-header .room-name{color:#fff;font-weight:700;font-size:1rem;}.messenger-body{flex:1;padding:1rem;display:flex;flex-direction:column;gap:0.6rem;}.bubble-row{display:flex;align-items:flex-end;gap:0.5rem;}.bubble-row.right{flex-direction:row-reverse;}.bubble-text{padding:0.5rem 0.85rem;border-radius:18px;font-size:0.9rem;line-height:1.5;}.bubble-row.left .bubble-text{background:#fff;color:#222;border-radius:0 18px 18px 18px;}.bubble-row.right .bubble-text{background:#FEE500;color:#222;border-radius:18px 0 18px 18px;}.bubble-name{font-size:0.72rem;font-weight:600;margin-bottom:0.2rem;opacity:0.7;color:#333;}.bubble-content{display:flex;flex-direction:column;max-width:70%;}.bubble-row.right .bubble-content{align-items:flex-end;}.action-block{text-align:center;padding:0.5rem 1rem;font-style:italic;font-size:0.8rem;color:#444;opacity:0.85;background:rgba(0,0,0,0.04);border-radius:16px;margin:0.2rem 2rem;}.action-block .action-prefix{font-size:0.68rem;font-weight:700;opacity:0.6;margin-right:0.25rem;}.scene-block{display:flex;align-items:center;gap:0.7rem;padding:0.4rem 0.6rem;}.scene-block::before,.scene-block::after{content:'';flex:1;height:1px;background:#666;opacity:0.3;}.scene-text{font-size:0.8rem;font-weight:600;white-space:nowrap;color:#444;opacity:0.75;}.avatar-circle{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.8rem;font-weight:700;color:#fff;}`,
-    line: `.messenger-preview{background:#f5f5f5;border-radius:16px;overflow:hidden;min-height:300px;display:flex;flex-direction:column;}.messenger-header{background:#06C755;padding:1rem 1.2rem;}.messenger-header .room-name{color:#fff;font-weight:700;font-size:1rem;}.messenger-body{flex:1;padding:1rem;display:flex;flex-direction:column;gap:0.6rem;}.bubble-row{display:flex;align-items:flex-end;gap:0.5rem;}.bubble-row.right{flex-direction:row-reverse;}.bubble-text{padding:0.5rem 0.85rem;border-radius:18px;font-size:0.9rem;line-height:1.5;}.bubble-row.left .bubble-text{background:#fff;color:#222;border-radius:0 18px 18px 18px;}.bubble-row.right .bubble-text{background:#06C755;color:#fff;border-radius:18px 0 18px 18px;}.bubble-name{font-size:0.72rem;font-weight:600;margin-bottom:0.2rem;opacity:0.7;color:#555;}.bubble-content{display:flex;flex-direction:column;max-width:70%;}.bubble-row.right .bubble-content{align-items:flex-end;}.action-block{text-align:center;padding:0.5rem 1rem;font-style:italic;font-size:0.8rem;color:#666;opacity:0.85;background:rgba(0,0,0,0.04);border-radius:16px;margin:0.2rem 2rem;}.action-block .action-prefix{font-size:0.68rem;font-weight:700;opacity:0.6;margin-right:0.25rem;}.scene-block{display:flex;align-items:center;gap:0.7rem;padding:0.4rem 0.6rem;}.scene-block::before,.scene-block::after{content:'';flex:1;height:1px;background:#999;opacity:0.3;}.scene-text{font-size:0.8rem;font-weight:600;white-space:nowrap;color:#666;opacity:0.75;}.avatar-circle{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.8rem;font-weight:700;color:#fff;}`,
-    twitter: `.messenger-preview{background:#fff;border-radius:16px;overflow:hidden;min-height:300px;display:flex;flex-direction:column;}.messenger-header{background:#fff;border-bottom:1px solid #e7e7e7;padding:1rem 1.2rem;}.messenger-header .room-name{color:#0f1419;font-weight:700;font-size:1rem;}.messenger-body{flex:1;padding:1rem;display:flex;flex-direction:column;gap:0.6rem;}.bubble-row{display:flex;align-items:flex-end;gap:0.5rem;}.bubble-row.right{flex-direction:row-reverse;}.bubble-text{padding:0.5rem 0.85rem;border-radius:18px;font-size:0.9rem;line-height:1.5;}.bubble-row.left .bubble-text{background:#eff3f4;color:#0f1419;border-radius:4px 18px 18px 18px;}.bubble-row.right .bubble-text{background:#1D9BF0;color:#fff;border-radius:18px 4px 18px 18px;}.bubble-name{font-size:0.72rem;font-weight:600;margin-bottom:0.2rem;opacity:0.7;color:#536471;}.bubble-content{display:flex;flex-direction:column;max-width:70%;}.bubble-row.right .bubble-content{align-items:flex-end;}.action-block{text-align:center;padding:0.5rem 1rem;font-style:italic;font-size:0.8rem;color:#536471;opacity:0.85;background:rgba(0,0,0,0.04);border-radius:16px;margin:0.2rem 2rem;}.action-block .action-prefix{font-size:0.68rem;font-weight:700;opacity:0.6;margin-right:0.25rem;}.scene-block{display:flex;align-items:center;gap:0.7rem;padding:0.4rem 0.6rem;}.scene-block::before,.scene-block::after{content:'';flex:1;height:1px;background:#cfd9de;opacity:0.3;}.scene-text{font-size:0.8rem;font-weight:600;white-space:nowrap;color:#536471;opacity:0.75;}.avatar-circle{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.8rem;font-weight:700;color:#fff;}`,
-    light: `.messenger-preview{background:#f8f9fb;border-radius:16px;overflow:hidden;min-height:300px;display:flex;flex-direction:column;}.messenger-header{background:#fff;border-bottom:1px solid #e8eaf0;padding:1rem 1.2rem;}.messenger-header .room-name{color:#333;font-weight:700;font-size:1rem;}.messenger-body{flex:1;padding:1rem;display:flex;flex-direction:column;gap:0.6rem;}.bubble-row{display:flex;align-items:flex-end;gap:0.5rem;}.bubble-row.right{flex-direction:row-reverse;}.bubble-text{padding:0.5rem 0.85rem;border-radius:18px;font-size:0.9rem;line-height:1.5;}.bubble-row.left .bubble-text{background:#e8f4fe;color:#2c3e50;border-radius:4px 18px 18px 18px;}.bubble-row.right .bubble-text{background:#c8e6ff;color:#1a2c3d;border-radius:18px 4px 18px 18px;}.bubble-name{font-size:0.72rem;font-weight:600;margin-bottom:0.2rem;opacity:0.7;color:#666;}.bubble-content{display:flex;flex-direction:column;max-width:70%;}.bubble-row.right .bubble-content{align-items:flex-end;}.action-block{text-align:center;padding:0.5rem 1rem;font-style:italic;font-size:0.8rem;color:#666;opacity:0.85;background:rgba(0,0,0,0.04);border-radius:16px;margin:0.2rem 2rem;}.action-block .action-prefix{font-size:0.68rem;font-weight:700;opacity:0.6;margin-right:0.25rem;}.scene-block{display:flex;align-items:center;gap:0.7rem;padding:0.4rem 0.6rem;}.scene-block::before,.scene-block::after{content:'';flex:1;height:1px;background:#bbb;opacity:0.3;}.scene-text{font-size:0.8rem;font-weight:600;white-space:nowrap;color:#888;opacity:0.75;}.avatar-circle{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.8rem;font-weight:700;color:#fff;}`,
-    dark: `.messenger-preview{background:#1a1a2e;border-radius:16px;overflow:hidden;min-height:300px;display:flex;flex-direction:column;}.messenger-header{background:#16213e;padding:1rem 1.2rem;}.messenger-header .room-name{color:#e0e0e0;font-weight:700;font-size:1rem;}.messenger-body{flex:1;padding:1rem;display:flex;flex-direction:column;gap:0.6rem;}.bubble-row{display:flex;align-items:flex-end;gap:0.5rem;}.bubble-row.right{flex-direction:row-reverse;}.bubble-text{padding:0.5rem 0.85rem;border-radius:18px;font-size:0.9rem;line-height:1.5;}.bubble-row.left .bubble-text{background:#2a2a4a;color:#ddd;border-radius:4px 18px 18px 18px;}.bubble-row.right .bubble-text{background:#0f3460;color:#e0e0e0;border-radius:18px 4px 18px 18px;}.bubble-name{font-size:0.72rem;font-weight:600;margin-bottom:0.2rem;opacity:0.7;color:#aaa;}.bubble-content{display:flex;flex-direction:column;max-width:70%;}.bubble-row.right .bubble-content{align-items:flex-end;}.action-block{text-align:center;padding:0.5rem 1rem;font-style:italic;font-size:0.8rem;color:#aaa;opacity:0.85;background:rgba(255,255,255,0.05);border-radius:16px;margin:0.2rem 2rem;}.action-block .action-prefix{font-size:0.68rem;font-weight:700;opacity:0.6;margin-right:0.25rem;}.scene-block{display:flex;align-items:center;gap:0.7rem;padding:0.4rem 0.6rem;}.scene-block::before,.scene-block::after{content:'';flex:1;height:1px;background:#555;opacity:0.3;}.scene-text{font-size:0.8rem;font-weight:600;white-space:nowrap;color:#aaa;opacity:0.75;}.avatar-circle{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.8rem;font-weight:700;color:#fff;}`,
-    custom: `.messenger-preview{background:#f0f2f5;border-radius:16px;overflow:hidden;min-height:300px;display:flex;flex-direction:column;}.messenger-header{background:#4A90D9;padding:1rem 1.2rem;}.messenger-header .room-name{color:#fff;font-weight:700;font-size:1rem;}.messenger-body{flex:1;padding:1rem;display:flex;flex-direction:column;gap:0.6rem;}.bubble-row{display:flex;align-items:flex-end;gap:0.5rem;}.bubble-row.right{flex-direction:row-reverse;}.bubble-text{padding:0.5rem 0.85rem;border-radius:18px;font-size:0.9rem;line-height:1.5;word-break:break-word;white-space:pre-wrap;}.bubble-row.left .bubble-text{background:#e8f4fe;color:#222;border-radius:0 18px 18px 18px;}.bubble-row.right .bubble-text{background:#c8e6ff;color:#1a2c3d;border-radius:18px 0 18px 18px;}.bubble-name{font-size:0.72rem;font-weight:600;margin-bottom:0.2rem;opacity:0.7;}.bubble-content{display:flex;flex-direction:column;max-width:70%;}.bubble-row.right .bubble-content{align-items:flex-end;}.action-block{text-align:center;padding:0.5rem 1rem;font-style:italic;font-size:0.8rem;opacity:0.85;background:rgba(0,0,0,0.04);border-radius:16px;margin:0.2rem 2rem;}.action-block .action-prefix{font-size:0.68rem;font-weight:700;opacity:0.6;margin-right:0.25rem;}.scene-block{display:flex;align-items:center;gap:0.7rem;padding:0.4rem 0.6rem;}.scene-block::before,.scene-block::after{content:'';flex:1;height:1px;background:currentColor;opacity:0.3;}.scene-text{font-size:0.8rem;font-weight:600;white-space:nowrap;opacity:0.75;}.avatar-circle{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.8rem;font-weight:700;color:#fff;}`,
+    kakao: `.messenger-preview{background:#B2C7D9;border-radius:16px;overflow:hidden;min-height:300px;display:flex;flex-direction:column;}.messenger-header{background:#a8bfcf;padding:1rem 1.2rem;}.messenger-header .room-name{color:#fff;font-weight:700;font-size:1rem;}.messenger-body{flex:1;padding:1rem;display:flex;flex-direction:column;gap:0.6rem;}.bubble-row{display:flex;align-items:flex-end;gap:0.5rem;}.bubble-row.right{flex-direction:row-reverse;}.bubble-text{padding:0.5rem 0.85rem;border-radius:18px;font-size:0.9rem;line-height:1.5;}.bubble-row.left .bubble-text{background:#fff;color:#222;border-radius:0 18px 18px 18px;}.bubble-row.right .bubble-text{background:#FEE500;color:#222;border-radius:18px 0 18px 18px;}.bubble-name{font-size:0.72rem;font-weight:600;margin-bottom:0.2rem;opacity:0.7;color:#333;}.bubble-content{display:flex;flex-direction:column;max-width:70%;}.bubble-row.right .bubble-content{align-items:flex-end;}.scene-block{display:flex;align-items:center;gap:0.7rem;padding:0.4rem 0.6rem;}.scene-block::before,.scene-block::after{content:'';flex:1;height:1px;background:#666;opacity:0.3;}.scene-text{font-size:0.8rem;font-weight:600;white-space:nowrap;color:#444;opacity:0.75;}.avatar-circle{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.8rem;font-weight:700;color:#fff;}`,
+    line: `.messenger-preview{background:#f5f5f5;border-radius:16px;overflow:hidden;min-height:300px;display:flex;flex-direction:column;}.messenger-header{background:#06C755;padding:1rem 1.2rem;}.messenger-header .room-name{color:#fff;font-weight:700;font-size:1rem;}.messenger-body{flex:1;padding:1rem;display:flex;flex-direction:column;gap:0.6rem;}.bubble-row{display:flex;align-items:flex-end;gap:0.5rem;}.bubble-row.right{flex-direction:row-reverse;}.bubble-text{padding:0.5rem 0.85rem;border-radius:18px;font-size:0.9rem;line-height:1.5;}.bubble-row.left .bubble-text{background:#fff;color:#222;border-radius:0 18px 18px 18px;}.bubble-row.right .bubble-text{background:#06C755;color:#fff;border-radius:18px 0 18px 18px;}.bubble-name{font-size:0.72rem;font-weight:600;margin-bottom:0.2rem;opacity:0.7;color:#555;}.bubble-content{display:flex;flex-direction:column;max-width:70%;}.bubble-row.right .bubble-content{align-items:flex-end;}.scene-block{display:flex;align-items:center;gap:0.7rem;padding:0.4rem 0.6rem;}.scene-block::before,.scene-block::after{content:'';flex:1;height:1px;background:#999;opacity:0.3;}.scene-text{font-size:0.8rem;font-weight:600;white-space:nowrap;color:#666;opacity:0.75;}.avatar-circle{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.8rem;font-weight:700;color:#fff;}`,
+    twitter: `.messenger-preview{background:#fff;border-radius:16px;overflow:hidden;min-height:300px;display:flex;flex-direction:column;}.messenger-header{background:#fff;border-bottom:1px solid #e7e7e7;padding:1rem 1.2rem;}.messenger-header .room-name{color:#0f1419;font-weight:700;font-size:1rem;}.messenger-body{flex:1;padding:1rem;display:flex;flex-direction:column;gap:0.6rem;}.bubble-row{display:flex;align-items:flex-end;gap:0.5rem;}.bubble-row.right{flex-direction:row-reverse;}.bubble-text{padding:0.5rem 0.85rem;border-radius:18px;font-size:0.9rem;line-height:1.5;}.bubble-row.left .bubble-text{background:#eff3f4;color:#0f1419;border-radius:4px 18px 18px 18px;}.bubble-row.right .bubble-text{background:#1D9BF0;color:#fff;border-radius:18px 4px 18px 18px;}.bubble-name{font-size:0.72rem;font-weight:600;margin-bottom:0.2rem;opacity:0.7;color:#536471;}.bubble-content{display:flex;flex-direction:column;max-width:70%;}.bubble-row.right .bubble-content{align-items:flex-end;}.scene-block{display:flex;align-items:center;gap:0.7rem;padding:0.4rem 0.6rem;}.scene-block::before,.scene-block::after{content:'';flex:1;height:1px;background:#cfd9de;opacity:0.3;}.scene-text{font-size:0.8rem;font-weight:600;white-space:nowrap;color:#536471;opacity:0.75;}.avatar-circle{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.8rem;font-weight:700;color:#fff;}`,
+    light: `.messenger-preview{background:#f8f9fb;border-radius:16px;overflow:hidden;min-height:300px;display:flex;flex-direction:column;}.messenger-header{background:#fff;border-bottom:1px solid #e8eaf0;padding:1rem 1.2rem;}.messenger-header .room-name{color:#333;font-weight:700;font-size:1rem;}.messenger-body{flex:1;padding:1rem;display:flex;flex-direction:column;gap:0.6rem;}.bubble-row{display:flex;align-items:flex-end;gap:0.5rem;}.bubble-row.right{flex-direction:row-reverse;}.bubble-text{padding:0.5rem 0.85rem;border-radius:18px;font-size:0.9rem;line-height:1.5;}.bubble-row.left .bubble-text{background:#e8f4fe;color:#2c3e50;border-radius:4px 18px 18px 18px;}.bubble-row.right .bubble-text{background:#c8e6ff;color:#1a2c3d;border-radius:18px 4px 18px 18px;}.bubble-name{font-size:0.72rem;font-weight:600;margin-bottom:0.2rem;opacity:0.7;color:#666;}.bubble-content{display:flex;flex-direction:column;max-width:70%;}.bubble-row.right .bubble-content{align-items:flex-end;}.scene-block{display:flex;align-items:center;gap:0.7rem;padding:0.4rem 0.6rem;}.scene-block::before,.scene-block::after{content:'';flex:1;height:1px;background:#bbb;opacity:0.3;}.scene-text{font-size:0.8rem;font-weight:600;white-space:nowrap;color:#888;opacity:0.75;}.avatar-circle{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.8rem;font-weight:700;color:#fff;}`,
+    dark: `.messenger-preview{background:#1a1a2e;border-radius:16px;overflow:hidden;min-height:300px;display:flex;flex-direction:column;}.messenger-header{background:#16213e;padding:1rem 1.2rem;}.messenger-header .room-name{color:#e0e0e0;font-weight:700;font-size:1rem;}.messenger-body{flex:1;padding:1rem;display:flex;flex-direction:column;gap:0.6rem;}.bubble-row{display:flex;align-items:flex-end;gap:0.5rem;}.bubble-row.right{flex-direction:row-reverse;}.bubble-text{padding:0.5rem 0.85rem;border-radius:18px;font-size:0.9rem;line-height:1.5;}.bubble-row.left .bubble-text{background:#2a2a4a;color:#ddd;border-radius:4px 18px 18px 18px;}.bubble-row.right .bubble-text{background:#0f3460;color:#e0e0e0;border-radius:18px 4px 18px 18px;}.bubble-name{font-size:0.72rem;font-weight:600;margin-bottom:0.2rem;opacity:0.7;color:#aaa;}.bubble-content{display:flex;flex-direction:column;max-width:70%;}.bubble-row.right .bubble-content{align-items:flex-end;}.scene-block{display:flex;align-items:center;gap:0.7rem;padding:0.4rem 0.6rem;}.scene-block::before,.scene-block::after{content:'';flex:1;height:1px;background:#555;opacity:0.3;}.scene-text{font-size:0.8rem;font-weight:600;white-space:nowrap;color:#aaa;opacity:0.75;}.avatar-circle{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.8rem;font-weight:700;color:#fff;}`,
+    custom: `.messenger-preview{background:#f0f2f5;border-radius:16px;overflow:hidden;min-height:300px;display:flex;flex-direction:column;}.messenger-header{background:#4A90D9;padding:1rem 1.2rem;}.messenger-header .room-name{color:#fff;font-weight:700;font-size:1rem;}.messenger-body{flex:1;padding:1rem;display:flex;flex-direction:column;gap:0.6rem;}.bubble-row{display:flex;align-items:flex-end;gap:0.5rem;}.bubble-row.right{flex-direction:row-reverse;}.bubble-text{padding:0.5rem 0.85rem;border-radius:18px;font-size:0.9rem;line-height:1.5;word-break:break-word;white-space:pre-wrap;}.bubble-row.left .bubble-text{background:#e8f4fe;color:#222;border-radius:0 18px 18px 18px;}.bubble-row.right .bubble-text{background:#c8e6ff;color:#1a2c3d;border-radius:18px 0 18px 18px;}.bubble-name{font-size:0.72rem;font-weight:600;margin-bottom:0.2rem;opacity:0.7;}.bubble-content{display:flex;flex-direction:column;max-width:70%;}.bubble-row.right .bubble-content{align-items:flex-end;}.scene-block{display:flex;align-items:center;gap:0.7rem;padding:0.4rem 0.6rem;}.scene-block::before,.scene-block::after{content:'';flex:1;height:1px;background:currentColor;opacity:0.3;}.scene-text{font-size:0.8rem;font-weight:600;white-space:nowrap;opacity:0.75;}.avatar-circle{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.8rem;font-weight:700;color:#fff;}`,
   };
   return themes[theme] || themes.kakao;
 }

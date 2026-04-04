@@ -44,7 +44,7 @@ input, textarea, select {
   align-items: center;
   justify-content: center;
   padding: 2rem;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: #ffffff;
 }
 
 .landing-header {
@@ -55,14 +55,12 @@ input, textarea, select {
 .landing-header h1 {
   font-size: 2.4rem;
   font-weight: 700;
-  color: #fff;
-  margin-bottom: 0.6rem;
-  text-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  color: #333;
 }
 
 .landing-header p {
   font-size: 1.05rem;
-  color: rgba(255,255,255,0.85);
+  color: #777;
 }
 
 .card-grid {
@@ -70,7 +68,7 @@ input, textarea, select {
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: 1.8rem;
   width: 100%;
-  max-width: 720px;
+  max-width: 900px;
 }
 
 .tool-card {
@@ -126,7 +124,7 @@ input, textarea, select {
 
 .landing-footer {
   margin-top: 3rem;
-  color: rgba(255,255,255,0.6);
+  color: #aaa;
   font-size: 0.85rem;
 }
 
@@ -498,17 +496,15 @@ input, textarea, select {
 
 /* ===================== PREVIEW PANEL ===================== */
 .preview-panel {
-  background: #f0f2f5;
+  background: #f5f7fa;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  padding: 2rem;
 }
 
 .preview-panel::-webkit-scrollbar { width: 6px; }
-.preview-panel::-webkit-scrollbar-track { background: #e8eaf0; }
-.preview-panel::-webkit-scrollbar-thumb { background: #bbb; border-radius: 3px; }
+.preview-panel::-webkit-scrollbar-track { background: #f1f1f1; }
+.preview-panel::-webkit-scrollbar-thumb { background: #ccc; border-radius: 3px; }
 
 .preview-inner {
   width: 100%;
@@ -1064,4 +1060,128 @@ input[type="color"] {
   color: #999;
   text-align: right;
   margin-top: 2px;
+}
+
+/* Prevent body scroll when in tool pages */
+body.split-page {
+  overflow: hidden;
+  height: 100vh;
+}
+
+/* ===================== ACCORDION / TOGGLE SECTIONS ===================== */
+.accordion-section {
+  border-bottom: 1px solid #f0f2f5;
+}
+
+.accordion-header {
+  padding: 0.85rem 1.4rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  user-select: none;
+  background: #fff;
+  transition: background 0.15s;
+}
+
+.accordion-header:hover {
+  background: #f8f9fb;
+}
+
+.accordion-title {
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #999;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.accordion-title i { color: #4A90D9; }
+
+.accordion-toggle-icon {
+  font-size: 0.75rem;
+  color: #bbb;
+  transition: transform 0.25s;
+}
+
+.accordion-section.collapsed .accordion-toggle-icon {
+  transform: rotate(-90deg);
+}
+
+.accordion-body {
+  padding: 0 1.4rem 1.2rem;
+  overflow: hidden;
+  transition: max-height 0.3s ease;
+}
+
+.accordion-section.collapsed .accordion-body {
+  display: none;
+}
+
+/* ===================== COMPACT CHARACTER CARDS ===================== */
+.character-card {
+  border: 1.5px solid #e8eaf0;
+  border-radius: 10px;
+  padding: 0.65rem 0.85rem;
+  margin-bottom: 0.65rem;
+  background: #fafbfc;
+}
+
+.character-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+}
+
+.character-num {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #4A90D9;
+}
+
+.character-card .form-group {
+  margin-bottom: 0.45rem;
+}
+
+.character-card .form-label {
+  font-size: 0.75rem;
+  margin-bottom: 0.2rem;
+}
+
+.character-card .form-input,
+.character-card .form-select {
+  padding: 0.3rem 0.6rem;
+  font-size: 0.82rem;
+}
+
+/* Profile image upload in character card */
+.char-img-upload-area {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.char-img-preview {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid #e0e3ea;
+}
+
+.char-img-placeholder {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #e8eaf0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.7rem;
+  color: #999;
+  flex-shrink: 0;
 }
