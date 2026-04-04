@@ -2,13 +2,21 @@
 const state = {
   profiles: [],
   nodes: [],
-  relations: [], // { from: id, to: id, label: '' }
+  relations: [],
   nextProfileId: 1,
   nextNodeId: 1,
 };
 
 const AVATAR_COLORS = ['#4A90D9', '#e9658b', '#f5a623', '#7ed321', '#9b59b6', '#1abc9c'];
 const collapsedProfiles = new Set();
+
+const NODE_SHAPES = [
+  { value: 'circle', label: '● 원', icon: '●' },
+  { value: 'heart', label: '♥ 하트', icon: '♥' },
+  { value: 'star', label: '★ 별', icon: '★' },
+  { value: 'triangle', label: '▲ 세모', icon: '▲' },
+  { value: 'diamond', label: '◆ 마름모', icon: '◆' },
+];
 
 // ===================== INIT =====================
 document.addEventListener('DOMContentLoaded', () => {
@@ -45,7 +53,7 @@ function addProfile() {
     return;
   }
   const id = state.nextProfileId++;
-  state.profiles.push({ id, name: `인물 ${id}`, desc: '', imgUrl: '' });
+  state.profiles.push({ id, name: `인물 ${id}`, imgUrl: '' });
   rebuildRelations();
   renderProfiles();
   renderPreview();
@@ -73,16 +81,10 @@ function toggleProfileCard(id) {
 function updateProfile(id, field, value) {
   const profile = state.profiles.find(p => p.id === id);
   if (profile) {
-    if (field === 'desc') value = value.slice(0, 30);
     profile[field] = value;
     renderPreview();
     if (field === 'name') {
       renderProfiles();
-      renderRelationsUI();
-    }
-    if (field === 'desc') {
-      const counter = document.getElementById(`descCount-${id}`);
-      if (counter) counter.textContent = `${value.length}/30`;
     }
   }
 }
@@ -105,7 +107,6 @@ function removeProfileImage(id) {
 
 // ===================== RELATION MANAGEMENT =====================
 function rebuildRelations() {
-  // 인물 쌍별로 관계를 관리 (기존 관계 보존)
   const newRelations = [];
   for (let i = 0; i < state.profiles.length; i++) {
     for (let j = i + 1; j < state.profiles.length; j++) {
@@ -151,12 +152,12 @@ function renderRelationsUI() {
     row.innerHTML = `
       <span class="relation-pair">
         <span class="relation-name">${esc(pFrom.name)}</span>
-        <i class="fa-solid fa-arrows-left-right" style="color:#aaa;font-size:0.75rem;"></i>
+        <i class="fa-solid fa-arrows-left-right" style="color:#aaa;font-size:0.7rem;"></i>
         <span class="relation-name">${esc(pTo.name)}</span>
       </span>
       <input type="text" class="form-input" value="${escAttr(rel.label)}"
         oninput="updateRelation(${rel.from}, ${rel.to}, this.value)"
-        placeholder="예: 연인, 라이벌, 형제" style="flex:1;" />
+        placeholder="예: 연인, 형제, 라이벌" style="flex:1;" />
     `;
     container.appendChild(row);
   });
@@ -195,18 +196,10 @@ function renderProfiles() {
         </div>
       </div>
       <div class="char-card-body${isCollapsed ? ' collapsed' : ''}">
-        <div class="char-row">
-          <div class="form-group">
-            <label class="form-label">이름</label>
-            <input type="text" class="form-input" value="${escAttr(profile.name)}"
-              oninput="updateProfile(${profile.id}, 'name', this.value)" placeholder="인물 이름" />
-          </div>
-          <div class="form-group">
-            <label class="form-label">짧은 설명</label>
-            <input type="text" class="form-input" value="${escAttr(profile.desc)}" maxlength="30"
-              oninput="updateProfile(${profile.id}, 'desc', this.value)" placeholder="예: 주인공" />
-            <div class="char-count" id="descCount-${profile.id}">${profile.desc.length}/30</div>
-          </div>
+        <div class="form-group">
+          <label class="form-label">이름</label>
+          <input type="text" class="form-input" value="${escAttr(profile.name)}"
+            oninput="updateProfile(${profile.id}, 'name', this.value)" placeholder="인물 이름" />
         </div>
         <div class="form-group">
           <label class="form-label">프로필 이미지</label>
@@ -240,7 +233,8 @@ function addNode() {
     time: '',
     desc: '',
     color: '#4A90D9',
-    size: 10,
+    size: 14,
+    shape: 'circle',
     centerSide: 'left',
   });
   renderNodes();
@@ -265,21 +259,17 @@ function updateNode(id, field, value) {
   const node = state.nodes.find(n => n.id === id);
   if (node) {
     if (field === 'size') {
-      node[field] = parseInt(value, 10) || 10;
+      node[field] = parseInt(value, 10) || 14;
     } else {
       node[field] = value;
     }
-    if (field === 'color' || field === 'size') {
+    if (field === 'color' || field === 'size' || field === 'shape') {
+      // 도트 프리뷰 업데이트
       const item = document.querySelector(`.node-item[data-id="${id}"]`);
       if (item) {
         const dot = item.querySelector('.node-dot-preview');
         if (dot) {
-          const color = field === 'color' ? value : node.color;
-          const size = field === 'size' ? parseInt(value, 10) : node.size;
-          dot.style.backgroundColor = color;
-          dot.style.borderColor = color;
-          dot.style.width = `${size}px`;
-          dot.style.height = `${size}px`;
+          updateDotPreview(dot, node);
         }
         if (field === 'size') {
           const label = item.querySelector('.size-label');
@@ -292,6 +282,25 @@ function updateNode(id, field, value) {
     }
     renderPreview();
   }
+}
+
+function updateDotPreview(dot, node) {
+  const shapeInfo = getShapeChar(node.shape || 'circle');
+  dot.textContent = shapeInfo.char;
+  dot.style.color = node.color;
+  dot.style.fontSize = `${node.size || 14}px`;
+  dot.style.lineHeight = '1';
+}
+
+function getShapeChar(shape) {
+  const map = {
+    circle: { char: '●', outline: '○' },
+    heart: { char: '♥', outline: '♡' },
+    star: { char: '★', outline: '☆' },
+    triangle: { char: '▲', outline: '△' },
+    diamond: { char: '◆', outline: '◇' },
+  };
+  return map[shape] || map.circle;
 }
 
 function renderNodes() {
@@ -307,6 +316,8 @@ function renderNodes() {
     item.className = 'node-item';
     item.dataset.id = node.id;
 
+    const shapeInfo = getShapeChar(node.shape || 'circle');
+
     const centerSideUI = align === 'center' ? `
       <div class="form-group">
         <label class="form-label">배치</label>
@@ -317,9 +328,13 @@ function renderNodes() {
       </div>
     ` : '';
 
+    const shapeOptions = NODE_SHAPES.map(s =>
+      `<option value="${s.value}" ${(node.shape || 'circle') === s.value ? 'selected' : ''}>${s.label}</option>`
+    ).join('');
+
     item.innerHTML = `
       <div class="node-item-header">
-        <div class="node-dot-preview" style="background-color:${node.color};border-color:${node.color};width:${node.size}px;height:${node.size}px;"></div>
+        <span class="node-dot-preview" style="color:${node.color};font-size:${node.size || 14}px;line-height:1;">${shapeInfo.char}</span>
         <span style="font-size:0.82rem;font-weight:700;color:#4A90D9;">노드 ${idx + 1}</span>
         <span class="drag-handle" title="드래그하여 순서 변경"><i class="fa-solid fa-grip-vertical"></i></span>
         <button class="btn-icon danger" onclick="removeNode(${node.id})" title="삭제">
@@ -340,13 +355,19 @@ function renderNodes() {
       <div class="node-row">
         ${centerSideUI}
         <div class="form-group">
+          <label class="form-label">모양</label>
+          <select class="form-select" onchange="updateNode(${node.id}, 'shape', this.value)">
+            ${shapeOptions}
+          </select>
+        </div>
+        <div class="form-group">
           <label class="form-label">색상</label>
           <input type="color" value="${node.color}"
             oninput="updateNode(${node.id}, 'color', this.value)" style="width:100%;height:36px;" />
         </div>
         <div class="form-group">
-          <label class="form-label">크기: <span class="size-label">${node.size}px</span></label>
-          <input type="range" min="8" max="20" value="${node.size}"
+          <label class="form-label">크기: <span class="size-label">${node.size || 14}px</span></label>
+          <input type="range" min="10" max="24" value="${node.size || 14}"
             oninput="updateNode(${node.id}, 'size', this.value)" />
         </div>
       </div>
@@ -424,14 +445,14 @@ function renderPreview() {
 
 function renderProfilesPreview() {
   const row = document.getElementById('profilesRow');
-  if (state.profiles.length === 0) { row.innerHTML = ''; row.className = 'profiles-row'; return; }
+  if (state.profiles.length === 0) { row.innerHTML = ''; row.className = 'profiles-row-v2'; return; }
 
   row.className = 'profiles-row-v2';
-  let html = '';
+  let html = '<div class="profiles-inline">';
 
   state.profiles.forEach((p, idx) => {
-    // 인물 앞에 관계 화살표 삽입 (두 번째 인물부터)
     if (idx > 0) {
+      // 인접한 인물 간 관계
       const rel = state.relations.find(r =>
         (r.from === state.profiles[idx - 1].id && r.to === p.id) ||
         (r.from === p.id && r.to === state.profiles[idx - 1].id)
@@ -439,10 +460,10 @@ function renderProfilesPreview() {
       const label = rel && rel.label ? esc(rel.label) : '';
       html += `
         <div class="relation-arrow-block">
-          ${label ? `<span class="relation-label">${label}</span>` : ''}
+          ${label ? `<span class="relation-label">${label}</span>` : '<span class="relation-label" style="visibility:hidden;">·</span>'}
           <div class="relation-arrows">
-            <i class="fa-solid fa-arrow-left"></i>
-            <i class="fa-solid fa-arrow-right"></i>
+            <span>←</span>
+            <span>→</span>
           </div>
         </div>
       `;
@@ -461,8 +482,9 @@ function renderProfilesPreview() {
     `;
   });
 
-  // 3인일 때: 1-2 사이, 2-3 사이 관계는 위에서 처리됨
-  // 1-3 사이 관계가 있으면 아래에 별도 표시
+  html += '</div>';
+
+  // 3인일 때 1↔3 관계 (아래 브릿지)
   if (state.profiles.length === 3) {
     const rel13 = state.relations.find(r =>
       (r.from === state.profiles[0].id && r.to === state.profiles[2].id) ||
@@ -471,8 +493,12 @@ function renderProfilesPreview() {
     if (rel13 && rel13.label) {
       html += `
         <div class="relation-bridge">
-          <span class="relation-bridge-names">${esc(state.profiles[0].name)} ↔ ${esc(state.profiles[2].name)}</span>
-          <span class="relation-bridge-label">${esc(rel13.label)}</span>
+          <span class="relation-bridge-line"></span>
+          <span class="relation-bridge-content">
+            <span class="relation-bridge-names">${esc(state.profiles[0].name)} ↔ ${esc(state.profiles[2].name)}</span>
+            <span class="relation-bridge-label">${esc(rel13.label)}</span>
+          </span>
+          <span class="relation-bridge-line"></span>
         </div>
       `;
     }
@@ -500,55 +526,49 @@ function renderTimelinePreview() {
 
   state.nodes.forEach((node, idx) => {
     const isLast = idx === lastIdx;
-    const dotSize = node.size || 10;
+    const dotSize = node.size || 14;
     const gap = isLast ? 0 : defaultGap;
+    const shape = node.shape || 'circle';
+    const shapeInfo = getShapeChar(shape);
+
+    // 마지막 노드는 채워진 문자, 나머지는 비어있는 문자
+    const shapeChar = isLast ? shapeInfo.char : shapeInfo.outline;
 
     let alignClass = '';
-    let markerLeft = `${Math.round((20 - dotSize) / 2)}px`;
-    let markerRight = 'auto';
+    let markerStyle = '';
 
     if (align === 'right') {
       alignClass = ' align-right';
-      markerLeft = 'auto';
-      markerRight = `${Math.round((20 - dotSize) / 2)}px`;
+      markerStyle = `position:absolute;right:0;top:0;font-size:${dotSize}px;line-height:1;color:${sanitizeColor(node.color, '#4A90D9')};`;
     } else if (align === 'center') {
       const side = node.centerSide || 'left';
       if (side === 'left') {
         alignClass = ' align-center-left';
-        markerLeft = 'auto';
-        markerRight = `calc(50% - ${dotSize / 2}px)`;
+        markerStyle = `position:absolute;right:calc(50% - ${dotSize / 2}px);top:0;font-size:${dotSize}px;line-height:1;color:${sanitizeColor(node.color, '#4A90D9')};`;
       } else {
         alignClass = ' align-center-right';
-        markerLeft = `calc(50% - ${dotSize / 2}px)`;
-        markerRight = 'auto';
+        markerStyle = `position:absolute;left:calc(50% - ${dotSize / 2}px);top:0;font-size:${dotSize}px;line-height:1;color:${sanitizeColor(node.color, '#4A90D9')};`;
       }
+    } else {
+      // left (기본)
+      markerStyle = `position:absolute;left:0;top:0;font-size:${dotSize}px;line-height:1;color:${sanitizeColor(node.color, '#4A90D9')};`;
     }
-
-    const nodeBg = isLast ? sanitizeColor(node.color, '#4A90D9') : bgColor;
-
-    const markerStyle = `
-      width:${dotSize}px;
-      height:${dotSize}px;
-      background-color:${nodeBg};
-      border:2px solid ${sanitizeColor(node.color, '#4A90D9')};
-      top:4px;
-      left:${markerLeft};
-      right:${markerRight};
-    `;
 
     html += `
       <div class="timeline-node${alignClass}" style="padding-bottom:${isLast ? 0 : gap}px;">
-        <div class="node-marker${isLast ? ' last' : ''}" style="${markerStyle}"></div>
+        <span class="node-shape-marker" style="${markerStyle}">${shapeChar}</span>
         <div class="node-time" style="color:${timeTextColor};">${esc(node.time || '시점')}</div>
         <div class="node-desc" style="color:${descTextColor};">${escDesc(node.desc || '')}</div>
       </div>
     `;
   });
 
-  let lineLeft = '9px';
+  // 연결선 위치
+  let lineLeft = '6px';
   let lineRight = 'auto';
-  if (align === 'right') { lineLeft = 'auto'; lineRight = '9px'; }
-  else if (align === 'center') { lineLeft = '50%'; lineRight = 'auto'; }
+  let lineTransform = '';
+  if (align === 'right') { lineLeft = 'auto'; lineRight = '6px'; }
+  else if (align === 'center') { lineLeft = '50%'; lineRight = 'auto'; lineTransform = 'transform:translateX(-50%);'; }
 
   list.innerHTML = `
     <div style="position:relative;">
@@ -556,12 +576,12 @@ function renderTimelinePreview() {
         position:absolute;
         left:${lineLeft};
         right:${lineRight};
-        top:6px;
+        top:8px;
         width:2px;
         background:${lineColor};
         height:calc(100% - 16px);
         border-radius:2px;
-        ${align === 'center' ? 'transform:translateX(-50%);' : ''}
+        ${lineTransform}
       "></div>
       ${html}
     </div>
@@ -571,14 +591,14 @@ function renderTimelinePreview() {
 // ===================== EXPORT =====================
 function copyHTML() {
   const preview = document.getElementById('timelinePreview');
-  const html = `<!DOCTYPE html>\n<html lang="ko">\n<head>\n<meta charset="UTF-8"/>\n<meta name="viewport" content="width=device-width,initial-scale=1.0"/>\n<title>연표</title>\n<style>\nbody{font-family:'Noto Sans KR',-apple-system,sans-serif;background:#f5f7fa;display:flex;justify-content:center;padding:2rem;}\n.timeline-wrapper{background:#fdf8f0;border-radius:16px;padding:2rem 1.5rem;box-shadow:0 4px 30px rgba(0,0,0,0.1);max-width:640px;width:100%;}\n.timeline-title{text-align:center;font-size:1.3rem;font-weight:700;color:#333;margin-bottom:1.5rem;}\n.profiles-row-v2{display:flex;align-items:center;justify-content:center;gap:0;margin-bottom:2rem;flex-wrap:wrap;}\n.profile-chip-v2{display:flex;flex-direction:column;align-items:center;gap:0.3rem;}\n.profile-avatar-v2{width:48px;height:48px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1rem;font-weight:700;color:#fff;overflow:hidden;}\n.profile-avatar-v2 img{width:100%;height:100%;border-radius:50%;object-fit:cover;}\n.profile-name-v2{font-size:0.78rem;font-weight:600;color:#333;text-align:center;}\n.relation-arrow-block{display:flex;flex-direction:column;align-items:center;padding:0 0.6rem;gap:0.1rem;}\n.relation-label{font-size:0.7rem;font-weight:700;color:#555;}\n.relation-arrows{display:flex;gap:0.15rem;font-size:0.65rem;color:#999;}\n.relation-bridge{width:100%;text-align:center;margin-top:0.4rem;font-size:0.7rem;color:#888;display:flex;align-items:center;justify-content:center;gap:0.4rem;}\n.relation-bridge-names{color:#999;}\n.relation-bridge-label{font-weight:700;color:#555;}\n.timeline-list{position:relative;}\n.timeline-node{position:relative;padding-left:36px;display:flex;flex-direction:column;text-align:left;}\n.timeline-node.align-right{padding-left:0;padding-right:36px;text-align:right;}\n.timeline-node.align-right .node-marker{left:auto;right:0;}\n.timeline-node.align-center-left{padding-left:0;padding-right:calc(50% + 18px);text-align:right;}\n.timeline-node.align-center-left .node-marker{left:auto;}\n.timeline-node.align-center-right{padding-right:0;padding-left:calc(50% + 18px);text-align:left;}\n.node-marker{position:absolute;border-radius:50%;border:2px solid #4A90D9;background:transparent;}\n.node-marker.last{background:currentColor;border-color:currentColor;}\n.node-time{font-size:0.85rem;font-weight:700;margin-bottom:0.25rem;}\n.node-desc{font-size:0.88rem;line-height:1.65;white-space:pre-wrap;word-break:break-word;}\n</style>\n</head>\n<body>\n${preview.outerHTML}\n</body>\n</html>`;
+  const html = `<!DOCTYPE html>\n<html lang="ko">\n<head>\n<meta charset="UTF-8"/>\n<meta name="viewport" content="width=device-width,initial-scale=1.0"/>\n<title>연표</title>\n<style>\nbody{font-family:'Noto Sans KR',-apple-system,sans-serif;background:#f5f7fa;display:flex;justify-content:center;padding:2rem;}\n.timeline-wrapper{background:#fdf8f0;border-radius:16px;padding:2rem 1.5rem;box-shadow:0 4px 30px rgba(0,0,0,0.1);max-width:640px;width:100%;}\n.timeline-title{text-align:center;font-size:1.3rem;font-weight:700;color:#333;margin-bottom:1.5rem;}\n.profiles-row-v2{margin-bottom:2rem;}\n.profiles-inline{display:flex;align-items:center;justify-content:center;gap:0;}\n.profile-chip-v2{display:flex;flex-direction:column;align-items:center;gap:0.3rem;}\n.profile-avatar-v2{width:48px;height:48px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1rem;font-weight:700;color:#fff;overflow:hidden;}\n.profile-avatar-v2 img{width:100%;height:100%;border-radius:50%;object-fit:cover;}\n.profile-name-v2{font-size:0.78rem;font-weight:600;color:#333;text-align:center;}\n.relation-arrow-block{display:flex;flex-direction:column;align-items:center;padding:0 0.5rem;gap:0.1rem;margin-bottom:1.1rem;}\n.relation-label{font-size:0.68rem;font-weight:700;color:#555;}\n.relation-arrows{font-size:0.6rem;color:#aaa;letter-spacing:1px;}\n.relation-bridge{display:flex;align-items:center;justify-content:center;gap:0.4rem;margin-top:0.3rem;}\n.relation-bridge-line{flex:1;max-width:40px;height:1px;background:#ccc;}\n.relation-bridge-content{display:flex;flex-direction:column;align-items:center;gap:0.05rem;}\n.relation-bridge-names{font-size:0.65rem;color:#aaa;}\n.relation-bridge-label{font-size:0.7rem;font-weight:700;color:#555;}\n.timeline-list{position:relative;}\n.timeline-node{position:relative;padding-left:28px;display:flex;flex-direction:column;text-align:left;}\n.timeline-node.align-right{padding-left:0;padding-right:28px;text-align:right;}\n.timeline-node.align-center-left{padding-left:0;padding-right:calc(50% + 14px);text-align:right;}\n.timeline-node.align-center-right{padding-right:0;padding-left:calc(50% + 14px);text-align:left;}\n.node-shape-marker{position:absolute;line-height:1;}\n.node-time{font-size:0.85rem;font-weight:700;margin-bottom:0.25rem;}\n.node-desc{font-size:0.88rem;line-height:1.65;white-space:pre-wrap;word-break:break-word;}\n</style>\n</head>\n<body>\n${preview.outerHTML}\n</body>\n</html>`;
   navigator.clipboard.writeText(html).then(() => alert('HTML이 클립보드에 복사되었습니다!'))
     .catch(() => { const ta = document.createElement('textarea'); ta.value = html; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta); alert('HTML이 클립보드에 복사되었습니다!'); });
 }
 
 function saveJSON() {
   const data = {
-    version: 3,
+    version: 4,
     profiles: state.profiles,
     nodes: state.nodes,
     relations: state.relations,
@@ -603,9 +623,20 @@ function loadJSON(event) {
   reader.onload = (e) => {
     try {
       const data = JSON.parse(e.target.result);
-      if (data.profiles) { state.profiles = data.profiles; collapsedProfiles.clear(); data.profiles.forEach(p => collapsedProfiles.add(p.id)); }
+      if (data.profiles) {
+        state.profiles = data.profiles.map(p => ({
+          id: p.id, name: p.name || '', imgUrl: p.imgUrl || ''
+        }));
+        collapsedProfiles.clear();
+        data.profiles.forEach(p => collapsedProfiles.add(p.id));
+      }
       if (data.nodes) {
-        state.nodes = data.nodes.map(n => ({ ...n, centerSide: n.centerSide || 'left' }));
+        state.nodes = data.nodes.map(n => ({
+          ...n,
+          centerSide: n.centerSide || 'left',
+          shape: n.shape || 'circle',
+          size: n.size || 14,
+        }));
       }
       if (data.relations) { state.relations = data.relations; } else { rebuildRelations(); }
       if (data.nextProfileId) state.nextProfileId = data.nextProfileId;
