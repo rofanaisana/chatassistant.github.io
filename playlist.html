@@ -41,6 +41,13 @@
               <option value="Nanum Myeongjo">나눔명조</option>
             </select>
           </div>
+          <div class="form-group">
+            <label class="form-label">레이아웃 방향 (셋리스트 ON 시)</label>
+            <select id="layoutDirection" class="form-select" onchange="renderPreview()">
+              <option value="horizontal">가로 (카세트 좌 / 셋리스트 우)</option>
+              <option value="vertical">세로 (카세트 상 / 셋리스트 하)</option>
+            </select>
+          </div>
           <div class="node-row">
             <div class="form-group">
               <label class="form-label">카세트 배경색</label>
@@ -68,7 +75,7 @@
             </div>
             <div class="form-group">
               <label class="form-label">구분선 색</label>
-              <input type="color" id="dividerColor" value="#333333" oninput="renderPreview()" />
+              <input type="color" id="dividerColor" value="#cccccc" oninput="renderPreview()" />
             </div>
           </div>
         </div>
@@ -187,7 +194,7 @@
 
       <!-- 미리보기 패널 -->
       <div class="preview-panel" id="previewPanel">
-        <div class="preview-inner" style="max-width:420px;">
+        <div class="preview-inner" style="max-width:680px;">
           <div id="playlistPreview"></div>
         </div>
       </div>
