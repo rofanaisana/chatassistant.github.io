@@ -206,48 +206,15 @@ function escAttr(str) {
   return String(str).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 
-// ===================== PREVIEW RENDER =====================
-function renderPreview() {
-  const showSetlist = document.getElementById('setlistToggle')?.checked || false;
-  const footerText = getVal('footerText');
-  const mainTitle = getVal('mainTitle');
-  const mainLyrics = getVal('mainLyrics');
-  const timeStart = getVal('timeStart') || '00:00';
-  const timeEnd = getVal('timeEnd') || '04:10';
-  const progressPct = Math.max(0, Math.min(100, parseInt(getVal('progressPos'), 10) || 30));
+// ===================== BUILD CASSETTE HTML =====================
+function buildCassette(opts) {
+  const { hasHeaderImg, bgColor, albumFallback, albumHTML, mainTitle, mainLyrics, progressPct, timeStart, timeEnd } = opts;
 
-  const setlistEditor = document.getElementById('setlistEditor');
-  if (setlistEditor) setlistEditor.style.display = showSetlist ? '' : 'none';
-
-  const font = getVal('fontSelect') || 'Pretendard';
-  const fontStack = getFontStack(font);
-  const bgColor = getColor('bgColor', '#f8e8ee');
-  const setlistBgColor = getColor('setlistBgColor', '#ffffff');
-  const textColor = getColor('textColor', '#333333');
-  const lyricsColor = getColor('lyricsColor', '#888888');
-  const accentColor = getColor('accentColor', '#555555');
-  const dividerColor = getColor('dividerColor', '#cccccc');
-  const albumFallback = getColor('albumFallbackColor', '#d4a0b0');
-
-  const hasHeaderImg = !!state.headerImg;
-
-  // 앨범 원형
-  const albumHTML = state.albumImg
-    ? `<img src="${esc(state.albumImg)}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;" />`
-    : `<i class="fa-solid fa-music" style="font-size:2rem;color:rgba(255,255,255,0.5);"></i>`;
-
-  // ===== 바깥 배경 (직사각형, border-radius:0) =====
-  const outerBg = hasHeaderImg
-    ? `<div style="position:absolute;inset:0;background-image:url('${state.headerImg}');background-size:cover;background-position:center;filter:blur(14px) brightness(0.75);transform:scale(1.15);z-index:0;"></div><div style="position:absolute;inset:0;background:${bgColor};opacity:0.2;z-index:0;"></div>`
-    : '';
-
-  // ===== 카세트 테이프 (항상 동일 크기) =====
-  const cassetteHTML = `
-    <div style="border-radius:16px;overflow:visible;box-shadow:0 4px 20px rgba(0,0,0,0.1);position:relative;width:100%;max-width:320px;flex-shrink:0;z-index:2;">
+  return `
+    <div style="border-radius:16px;overflow:visible;box-shadow:0 4px 20px rgba(0,0,0,0.1);position:relative;width:100%;max-width:320px;flex-shrink:0;z-index:3;">
       <!-- 상단: 헤더 이미지 원본 or 배경색 -->
-      <div style="position:relative;overflow:hidden;height:140px;border-radius:16px 16px 0 0;${hasHeaderImg ? `background-image:url('${state.headerImg}');background-size:cover;background-position:center;` : `background:${bgColor};`}">
-      </div>
-      <!-- 앨범 이미지 (상단/하단 경계에 걸침, 앞으로) -->
+      <div style="position:relative;overflow:hidden;height:140px;border-radius:16px 16px 0 0;${hasHeaderImg ? `background-image:url('${state.headerImg}');background-size:cover;background-position:center;` : `background:${bgColor};`}"></div>
+      <!-- 앨범 이미지 -->
       <div style="position:absolute;left:20px;top:85px;z-index:10;width:90px;height:90px;border-radius:50%;overflow:hidden;display:flex;align-items:center;justify-content:center;background:${albumFallback};box-shadow:0 4px 16px rgba(0,0,0,0.18);">
         ${albumHTML}
       </div>
@@ -279,6 +246,40 @@ function renderPreview() {
       </div>
     </div>
   `;
+}
+
+// ===================== PREVIEW RENDER =====================
+function renderPreview() {
+  const showSetlist = document.getElementById('setlistToggle')?.checked || false;
+  const footerText = getVal('footerText');
+  const mainTitle = getVal('mainTitle');
+  const mainLyrics = getVal('mainLyrics');
+  const timeStart = getVal('timeStart') || '00:00';
+  const timeEnd = getVal('timeEnd') || '04:10';
+  const progressPct = Math.max(0, Math.min(100, parseInt(getVal('progressPos'), 10) || 30));
+
+  const setlistEditor = document.getElementById('setlistEditor');
+  if (setlistEditor) setlistEditor.style.display = showSetlist ? '' : 'none';
+
+  const font = getVal('fontSelect') || 'Pretendard';
+  const fontStack = getFontStack(font);
+  const bgColor = getColor('bgColor', '#f8e8ee');
+  const setlistBgColor = getColor('setlistBgColor', '#ffffff');
+  const textColor = getColor('textColor', '#333333');
+  const lyricsColor = getColor('lyricsColor', '#888888');
+  const dividerColor = getColor('dividerColor', '#cccccc');
+  const albumFallback = getColor('albumFallbackColor', '#d4a0b0');
+  const hasHeaderImg = !!state.headerImg;
+
+  const albumHTML = state.albumImg
+    ? `<img src="${esc(state.albumImg)}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;" />`
+    : `<i class="fa-solid fa-music" style="font-size:2rem;color:rgba(255,255,255,0.5);"></i>`;
+
+  const outerBg = hasHeaderImg
+    ? `<div style="position:absolute;inset:0;background-image:url('${state.headerImg}');background-size:cover;background-position:center;filter:blur(14px) brightness(0.75);transform:scale(1.15);z-index:0;"></div><div style="position:absolute;inset:0;background:${bgColor};opacity:0.2;z-index:0;"></div>`
+    : '';
+
+  const cassetteHTML = buildCassette({ hasHeaderImg, bgColor, albumFallback, albumHTML, mainTitle, mainLyrics, progressPct, timeStart, timeEnd });
 
   // ===== 카세트만 =====
   if (!showSetlist) {
@@ -318,29 +319,28 @@ function renderPreview() {
 
   let footerHTML = '';
   if (footerText) {
-    footerHTML = `
-      <div style="margin-top:auto;padding-top:0.8rem;text-align:center;font-size:0.65rem;color:${lyricsColor};opacity:0.4;">
-        ${esc(footerText)}
-      </div>
-    `;
+    footerHTML = `<div style="margin-top:auto;padding-top:0.8rem;text-align:center;font-size:0.65rem;color:${lyricsColor};opacity:0.4;">${esc(footerText)}</div>`;
   }
 
-  // 셋리스트: 카세트 하단 근처에서 시작 (margin-top으로 크게 겹침)
-  // 카세트 전체 높이 ≈ 140(상단) + ~160(하단) = ~300px
-  // 셋리스트 상단을 카세트 하단 부근에서 시작 → margin-top: 160px (카세트의 절반 아래)
-  const setlistPanel = `
-    <div style="background:${setlistBgColor};border-radius:16px;padding:1rem 1.2rem;display:flex;flex-direction:column;flex:1;min-width:0;margin-top:160px;margin-left:-30px;box-shadow:0 4px 20px rgba(0,0,0,0.06);z-index:1;min-height:200px;">
-      ${tracksContent}
-      ${footerHTML}
-    </div>
-  `;
-
+  // 셋리스트 패널: position:absolute 로 카세트 우측 + 하단에서 시작
+  // 카세트 높이 ≈ 140 + 160 = 300px
+  // 셋리스트 top을 카세트 하단 바로 위(~200px)에서 시작하면 카세트 하단 영역과 겹침
+  // ��리스트 left를 카세트 우측에 겹치게(~55%)
   document.getElementById('playlistPreview').innerHTML = `
-    <div class="pl-cassette" style="font-family:${fontStack};position:relative;overflow:hidden;padding:1.5rem 1.5rem 1.5rem 1.5rem;${hasHeaderImg ? '' : `background:${bgColor};`}">
+    <div class="pl-cassette" style="font-family:${fontStack};position:relative;overflow:hidden;${hasHeaderImg ? '' : `background:${bgColor};`}padding:2rem 1.5rem 2rem 1.5rem;">
       ${outerBg}
-      <div style="position:relative;z-index:1;display:flex;align-items:flex-start;">
-        ${cassetteHTML}
-        ${setlistPanel}
+      <div style="position:relative;z-index:1;">
+        <!-- 카세트 (좌상단, z-index 높게) -->
+        <div style="position:relative;z-index:3;width:fit-content;">
+          ${cassetteHTML}
+        </div>
+        <!-- 셋리스트 (absolute, 우측으로 뻗고 카세트 하단 근처에서 시작) -->
+        <div style="position:absolute;top:200px;left:45%;right:0;z-index:2;background:${setlistBgColor};border-radius:16px;padding:1rem 1.2rem;box-shadow:0 4px 20px rgba(0,0,0,0.06);min-height:200px;display:flex;flex-direction:column;">
+          ${tracksContent}
+          ${footerHTML}
+        </div>
+        <!-- 셋리스트 높이만큼 공간 확보용 -->
+        <div style="margin-left:45%;padding-top:${Math.max(120, state.tracks.length * 42 + 60)}px;"></div>
       </div>
     </div>
   `;
@@ -378,7 +378,7 @@ ${preview.innerHTML}
 
 function saveJSON() {
   const data = {
-    version: 6,
+    version: 7,
     headerImg: state.headerImg,
     albumImg: state.albumImg,
     mainTitle: getVal('mainTitle'),
