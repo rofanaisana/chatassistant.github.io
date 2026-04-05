@@ -206,9 +206,23 @@ function escAttr(str) {
   return String(str).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 
+// 색상의 밝기 판단 → 밝으면 어두운 컨트롤, 어두우면 밝은 컨트롤
+function isLightColor(hex) {
+  const r = parseInt(hex.slice(1,3), 16);
+  const g = parseInt(hex.slice(3,5), 16);
+  const b = parseInt(hex.slice(5,7), 16);
+  return (r * 299 + g * 587 + b * 114) / 1000 > 160;
+}
+
 // ===================== BUILD CASSETTE (500px) =====================
 function buildCassette(opts) {
-  const { hasHeaderImg, bgColor, albumFallback, albumHTML, mainTitle, mainLyrics, progressPct, timeStart, timeEnd } = opts;
+  const { hasHeaderImg, bgColor, albumFallback, albumHTML, mainTitle, mainLyrics, progressPct, timeStart, timeEnd, playerBg, playerText } = opts;
+
+  // 플레이어 글자색 기반으로 반투명 색상 생성
+  const textSub = playerText + '80'; // 50% 투명
+  const textFaint = playerText + '40'; // 25% 투명
+  const textBar = playerText + '26'; // 15% 투명
+  const textBarFill = playerText + '99'; // 60% 투명
 
   return `
     <div style="border-radius:16px;overflow:visible;box-shadow:0 4px 20px rgba(0,0,0,0.1);width:500px;max-width:100%;">
@@ -216,24 +230,24 @@ function buildCassette(opts) {
       <div style="position:absolute;left:24px;top:92px;z-index:10;width:105px;height:105px;border-radius:50%;overflow:hidden;display:flex;align-items:center;justify-content:center;background:${albumFallback};box-shadow:0 4px 20px rgba(0,0,0,0.2);">
         ${albumHTML}
       </div>
-      <div style="background:#1a1a1a;padding:1rem 1.4rem 0.8rem 150px;color:#fff;border-radius:0 0 16px 16px;min-height:75px;display:flex;flex-direction:column;justify-content:center;">
+      <div style="background:${playerBg};padding:1rem 1.4rem 0.8rem 150px;color:${playerText};border-radius:0 0 16px 16px;min-height:75px;display:flex;flex-direction:column;justify-content:center;">
         <div style="margin-bottom:0.4rem;">
           <div style="font-size:0.95rem;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(mainTitle || '노래 제목')}</div>
-          <div style="font-size:0.75rem;color:rgba(255,255,255,0.5);margin-top:0.12rem;line-height:1.5;white-space:pre-wrap;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">${esc(mainLyrics || '가사 1~2줄')}</div>
+          <div style="font-size:0.75rem;color:${textSub};margin-top:0.12rem;line-height:1.5;white-space:pre-wrap;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">${esc(mainLyrics || '가사 1~2줄')}</div>
         </div>
         <div style="margin-bottom:0.25rem;">
-          <div style="position:relative;height:3px;background:rgba(255,255,255,0.15);border-radius:3px;margin-bottom:0.2rem;">
-            <div style="width:${progressPct}%;height:100%;background:rgba(255,255,255,0.6);border-radius:3px;"></div>
-            <div style="position:absolute;top:50%;left:${progressPct}%;transform:translate(-50%,-50%);width:10px;height:10px;background:#fff;border-radius:50%;box-shadow:0 1px 3px rgba(0,0,0,0.3);"></div>
+          <div style="position:relative;height:3px;background:${textBar};border-radius:3px;margin-bottom:0.2rem;">
+            <div style="width:${progressPct}%;height:100%;background:${textBarFill};border-radius:3px;"></div>
+            <div style="position:absolute;top:50%;left:${progressPct}%;transform:translate(-50%,-50%);width:10px;height:10px;background:${playerText};border-radius:50%;box-shadow:0 1px 3px rgba(0,0,0,0.3);"></div>
           </div>
-          <div style="display:flex;justify-content:space-between;font-size:0.6rem;color:rgba(255,255,255,0.4);">
+          <div style="display:flex;justify-content:space-between;font-size:0.6rem;color:${textFaint};">
             <span>${esc(timeStart)}</span><span>${esc(timeEnd)}</span>
           </div>
         </div>
-        <div style="display:flex;align-items:center;justify-content:center;gap:0.9rem;color:rgba(255,255,255,0.6);font-size:0.78rem;">
+        <div style="display:flex;align-items:center;justify-content:center;gap:0.9rem;color:${textSub};font-size:0.78rem;margin-left:-60px;">
           <i class="fa-solid fa-backward" style="font-size:0.55rem;opacity:0.5;"></i>
           <i class="fa-solid fa-backward-step"></i>
-          <div style="width:28px;height:28px;border-radius:50%;border:2px solid rgba(255,255,255,0.6);display:flex;align-items:center;justify-content:center;">
+          <div style="width:28px;height:28px;border-radius:50%;border:2px solid ${textSub};display:flex;align-items:center;justify-content:center;">
             <i class="fa-solid fa-play" style="font-size:0.6rem;margin-left:2px;"></i>
           </div>
           <i class="fa-solid fa-forward-step"></i>
@@ -246,13 +260,12 @@ function buildCassette(opts) {
 
 // ===================== TRACK HEIGHT CALCULATOR =====================
 function calcTrackAreaHeight(tracks) {
-  // 제목만: ~44px, 제목+가사: ~60px, 구분선: ~1px, padding 등
   let h = 0;
   tracks.forEach(t => {
-    h += t.lyrics ? 62 : 46; // 가사 유무에 따라 높이 다름
-    h += 1; // 구분선
+    h += t.lyrics ? 62 : 46;
+    h += 1;
   });
-  h += 16; // 셋리스트 padding-bottom
+  h += 16;
   return Math.max(80, h);
 }
 
@@ -277,6 +290,8 @@ function renderPreview() {
   const lyricsColor = getColor('lyricsColor', '#888888');
   const dividerColor = getColor('dividerColor', '#cccccc');
   const albumFallback = getColor('albumFallbackColor', '#d4a0b0');
+  const playerBg = getColor('playerBgColor', '#1a1a1a');
+  const playerText = getColor('playerTextColor', '#ffffff');
   const hasHeaderImg = !!state.headerImg;
 
   const albumHTML = state.albumImg
@@ -287,7 +302,7 @@ function renderPreview() {
     ? `<div style="position:absolute;inset:0;background-image:url('${state.headerImg}');background-size:cover;background-position:center;filter:blur(14px) brightness(0.75);transform:scale(1.15);z-index:0;"></div><div style="position:absolute;inset:0;background:${bgColor};opacity:0.2;z-index:0;"></div>`
     : '';
 
-  const cassetteOpts = { hasHeaderImg, bgColor, albumFallback, albumHTML, mainTitle, mainLyrics, progressPct, timeStart, timeEnd };
+  const cassetteOpts = { hasHeaderImg, bgColor, albumFallback, albumHTML, mainTitle, mainLyrics, progressPct, timeStart, timeEnd, playerBg, playerText };
 
   // ===== 카세트만 =====
   if (!showSetlist) {
@@ -304,7 +319,7 @@ function renderPreview() {
     return;
   }
 
-  // ===== 셋리스트 (넘버링 제거) =====
+  // ===== 셋리스트 =====
   let tracksContent = '';
   if (state.tracks.length === 0) {
     tracksContent = `<div style="font-size:0.9rem;color:${lyricsColor};text-align:center;padding:2rem 0;">곡을 추가하면 여기에 표시됩니다</div>`;
@@ -331,12 +346,11 @@ function renderPreview() {
     footerHTML = `<div style="padding-top:0.6rem;text-align:center;font-size:0.65rem;color:${lyricsColor};opacity:0.4;">${esc(footerText)}</div>`;
   }
 
-  // 높이 계산
   const setlistTop = 80;
   const spacerInSetlist = 220;
   const trackAreaHeight = calcTrackAreaHeight(state.tracks);
   const footerExtra = footerText ? 30 : 0;
-  const cassetteHeight = 270; // 헤더 150 + 다크 ~120
+  const cassetteHeight = 270;
   const setlistTotalHeight = spacerInSetlist + trackAreaHeight + footerExtra;
   const spacerHeight = Math.max(0, (setlistTop + setlistTotalHeight) - cassetteHeight + 16);
 
@@ -344,13 +358,11 @@ function renderPreview() {
     <div class="pl-cassette" style="font-family:${fontStack};position:relative;overflow:hidden;padding:2rem;${hasHeaderImg ? '' : `background:${bgColor};`}">
       ${outerBg}
       <div style="position:relative;z-index:1;">
-        <!-- 카��트 -->
         <div style="position:relative;z-index:3;width:500px;max-width:100%;">
           <div style="position:relative;">
             ${buildCassette(cassetteOpts)}
           </div>
         </div>
-        <!-- 셋리스트 -->
         <div style="position:absolute;top:${setlistTop}px;left:160px;right:-16px;z-index:2;">
           <div style="background:${setlistBgColor};border-radius:16px;padding:0 1.2rem 1rem;box-shadow:0 4px 20px rgba(0,0,0,0.06);">
             <div style="height:${spacerInSetlist}px;"></div>
@@ -358,7 +370,6 @@ function renderPreview() {
             ${footerHTML}
           </div>
         </div>
-        <!-- 높이 확보 spacer -->
         <div style="height:${spacerHeight}px;"></div>
       </div>
     </div>
@@ -397,7 +408,7 @@ ${preview.innerHTML}
 
 function saveJSON() {
   const data = {
-    version: 13,
+    version: 14,
     headerImg: state.headerImg,
     albumImg: state.albumImg,
     mainTitle: getVal('mainTitle'),
@@ -417,6 +428,8 @@ function saveJSON() {
     accentColor: getVal('accentColor'),
     dividerColor: getVal('dividerColor'),
     albumFallbackColor: getVal('albumFallbackColor'),
+    playerBgColor: getVal('playerBgColor'),
+    playerTextColor: getVal('playerTextColor'),
   };
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
   const a = document.createElement('a');
@@ -457,6 +470,8 @@ function loadJSON(event) {
       if (data.accentColor) setVal('accentColor', data.accentColor);
       if (data.dividerColor) setVal('dividerColor', data.dividerColor);
       if (data.albumFallbackColor) setVal('albumFallbackColor', data.albumFallbackColor);
+      if (data.playerBgColor) setVal('playerBgColor', data.playerBgColor);
+      if (data.playerTextColor) setVal('playerTextColor', data.playerTextColor);
 
       const toggle = document.getElementById('setlistToggle');
       if (toggle) toggle.checked = !!data.showSetlist;
