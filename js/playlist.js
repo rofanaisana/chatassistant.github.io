@@ -244,6 +244,18 @@ function buildCassette(opts) {
   `;
 }
 
+// ===================== TRACK HEIGHT CALCULATOR =====================
+function calcTrackAreaHeight(tracks) {
+  // 제목만: ~44px, 제목+가사: ~60px, 구분선: ~1px, padding 등
+  let h = 0;
+  tracks.forEach(t => {
+    h += t.lyrics ? 62 : 46; // 가사 유무에 따라 높이 다름
+    h += 1; // 구분선
+  });
+  h += 16; // 셋리스트 padding-bottom
+  return Math.max(80, h);
+}
+
 // ===================== PREVIEW RENDER =====================
 function renderPreview() {
   const showSetlist = document.getElementById('setlistToggle')?.checked || false;
@@ -292,18 +304,17 @@ function renderPreview() {
     return;
   }
 
-  // ===== 셋리스트 =====
+  // ===== 셋리스트 (넘버링 제거) =====
   let tracksContent = '';
   if (state.tracks.length === 0) {
     tracksContent = `<div style="font-size:0.9rem;color:${lyricsColor};text-align:center;padding:2rem 0;">곡을 추가하면 여기에 표시됩니다</div>`;
   } else {
-    state.tracks.forEach((track, idx) => {
+    state.tracks.forEach((track) => {
       const trackAlbum = track.albumImg
         ? `<div style="width:40px;height:40px;border-radius:6px;overflow:hidden;flex-shrink:0;"><img src="${esc(track.albumImg)}" style="width:100%;height:100%;object-fit:cover;" /></div>`
         : '';
       tracksContent += `
         <div style="display:flex;align-items:center;gap:0.6rem;padding:0.6rem 0;">
-          <span style="font-size:0.9rem;font-weight:700;color:${lyricsColor};min-width:1.8rem;text-align:right;">${idx + 1}.</span>
           <div style="flex:1;min-width:0;">
             <div style="font-size:1rem;font-weight:600;color:${textColor};overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(track.title || '제목')}</div>
             ${track.lyrics ? `<div style="font-size:0.78rem;color:${lyricsColor};margin-top:0.06rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(track.lyrics)}</div>` : ''}
@@ -320,33 +331,35 @@ function renderPreview() {
     footerHTML = `<div style="padding-top:0.6rem;text-align:center;font-size:0.65rem;color:${lyricsColor};opacity:0.4;">${esc(footerText)}</div>`;
   }
 
-  // 카세트 높이: 헤더 150 + 다크 ~120 = ~270px (top:0 기준)
-  // 셋리스트 top:80px, 빈 공간 220px → 1번 곡 시작 = 80+220 = 300px �� 카세트 하단 바로 아래
-  // 전체 높이: 셋리스트 absolute이므로 spacer div 필요
-  // spacer = 셋리스트 top(80) + 빈 공간(220) + 트랙 영역 + 패딩 - 카세트 높이(270)
-  const trackAreaHeight = Math.max(80, state.tracks.length * 46 + 40);
-  const spacerHeight = 80 + 220 + trackAreaHeight - 270 + 16;
+  // 높이 계산
+  const setlistTop = 80;
+  const spacerInSetlist = 220;
+  const trackAreaHeight = calcTrackAreaHeight(state.tracks);
+  const footerExtra = footerText ? 30 : 0;
+  const cassetteHeight = 270; // 헤더 150 + 다크 ~120
+  const setlistTotalHeight = spacerInSetlist + trackAreaHeight + footerExtra;
+  const spacerHeight = Math.max(0, (setlistTop + setlistTotalHeight) - cassetteHeight + 16);
 
   document.getElementById('playlistPreview').innerHTML = `
     <div class="pl-cassette" style="font-family:${fontStack};position:relative;overflow:hidden;padding:2rem;${hasHeaderImg ? '' : `background:${bgColor};`}">
       ${outerBg}
       <div style="position:relative;z-index:1;">
-        <!-- 카세트 -->
+        <!-- 카��트 -->
         <div style="position:relative;z-index:3;width:500px;max-width:100%;">
           <div style="position:relative;">
             ${buildCassette(cassetteOpts)}
           </div>
         </div>
         <!-- 셋리스트 -->
-        <div style="position:absolute;top:80px;left:160px;right:-16px;z-index:2;">
+        <div style="position:absolute;top:${setlistTop}px;left:160px;right:-16px;z-index:2;">
           <div style="background:${setlistBgColor};border-radius:16px;padding:0 1.2rem 1rem;box-shadow:0 4px 20px rgba(0,0,0,0.06);">
-            <div style="height:220px;"></div>
+            <div style="height:${spacerInSetlist}px;"></div>
             ${tracksContent}
             ${footerHTML}
           </div>
         </div>
         <!-- 높이 확보 spacer -->
-        <div style="height:${Math.max(0, spacerHeight)}px;"></div>
+        <div style="height:${spacerHeight}px;"></div>
       </div>
     </div>
   `;
@@ -384,7 +397,7 @@ ${preview.innerHTML}
 
 function saveJSON() {
   const data = {
-    version: 12,
+    version: 13,
     headerImg: state.headerImg,
     albumImg: state.albumImg,
     mainTitle: getVal('mainTitle'),
