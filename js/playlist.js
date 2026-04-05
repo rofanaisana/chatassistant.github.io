@@ -230,7 +230,7 @@ function buildCassette(opts) {
             <span>${esc(timeStart)}</span><span>${esc(timeEnd)}</span>
           </div>
         </div>
-        <div style="display:flex;align-items:center;gap:0.9rem;color:rgba(255,255,255,0.6);font-size:0.78rem;">
+        <div style="display:flex;align-items:center;justify-content:center;gap:0.9rem;color:rgba(255,255,255,0.6);font-size:0.78rem;">
           <i class="fa-solid fa-backward" style="font-size:0.55rem;opacity:0.5;"></i>
           <i class="fa-solid fa-backward-step"></i>
           <div style="width:28px;height:28px;border-radius:50%;border:2px solid rgba(255,255,255,0.6);display:flex;align-items:center;justify-content:center;">
