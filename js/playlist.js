@@ -206,9 +206,10 @@ function escAttr(str) {
   return String(str).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 
-// ===================== PREVIEW =====================
+// ===================== PREVIEW RENDER =====================
 function renderPreview() {
   const showSetlist = document.getElementById('setlistToggle')?.checked || false;
+  const layout = getVal('layoutDirection') || 'horizontal';
   const footerText = getVal('footerText');
   const mainTitle = getVal('mainTitle');
   const mainLyrics = getVal('mainLyrics');
@@ -228,118 +229,129 @@ function renderPreview() {
   const textColor = getColor('textColor', '#333333');
   const lyricsColor = getColor('lyricsColor', '#888888');
   const accentColor = getColor('accentColor', '#555555');
-  const dividerColor = getColor('dividerColor', '#333333');
+  const dividerColor = getColor('dividerColor', '#cccccc');
   const albumFallback = getColor('albumFallbackColor', '#d4a0b0');
 
-  // 헤더 배경 (블러)
+  // 블러 배경 스타일
   const headerBgStyle = state.headerImg
     ? `background-image:url('${state.headerImg}');background-size:cover;background-position:center;`
     : `background:${bgColor};`;
 
-  // 앨범 이미지 (원형)
+  // 앨범 원형 이미지
   const albumHTML = state.albumImg
     ? `<img src="${esc(state.albumImg)}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;" />`
     : `<i class="fa-solid fa-music" style="font-size:2.2rem;color:rgba(255,255,255,0.5);"></i>`;
 
-  let html = '';
+  // ===== 카세트 테이프 패널 =====
+  const cassetteHTML = `
+    <div style="border-radius:16px;overflow:hidden;background:${bgColor};display:flex;flex-direction:column;${showSetlist && layout === 'horizontal' ? 'width:240px;flex-shrink:0;' : 'width:100%;'}">
+      <!-- 블러 배경 + 앨범 + 제목 -->
+      <div style="position:relative;overflow:hidden;flex:1;">
+        <div style="position:absolute;inset:0;${headerBgStyle}filter:blur(24px) brightness(0.85) saturate(1.2);transform:scale(1.3);z-index:0;"></div>
+        <div style="position:absolute;inset:0;background:${bgColor};opacity:0.4;z-index:0;"></div>
 
-  // ========== 카세트 테이프 영역 ==========
-  html += `<div class="pl-cassette" style="font-family:${fontStack};border-radius:16px;overflow:hidden;box-shadow:0 6px 30px rgba(0,0,0,0.12);">`;
-
-  // --- 상단: 블러 배경 + 원형 이미지 좌측 + 제목/가사 우측 ---
-  html += `
-    <div style="position:relative;overflow:hidden;">
-      <!-- 블러 배경 레이어 -->
-      <div style="position:absolute;inset:0;${headerBgStyle}filter:blur(24px) brightness(0.85) saturate(1.2);transform:scale(1.3);z-index:0;"></div>
-      <div style="position:absolute;inset:0;background:${bgColor};opacity:0.45;z-index:0;"></div>
-
-      <div style="position:relative;z-index:1;padding:1.8rem 1.4rem 1rem;display:flex;align-items:center;gap:1.2rem;">
-        <!-- 원형 앨범 이미지 (좌측) -->
-        <div style="width:110px;height:110px;border-radius:50%;overflow:hidden;display:flex;align-items:center;justify-content:center;background:${albumFallback};box-shadow:0 4px 16px rgba(0,0,0,0.15);flex-shrink:0;">
-          ${albumHTML}
-        </div>
-        <!-- 제목 + 가사 (우측) -->
-        <div style="flex:1;min-width:0;">
-          <div style="font-size:1.15rem;font-weight:700;color:${textColor};margin-bottom:0.3rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(mainTitle || '노래 제목')}</div>
-          <div style="font-size:0.82rem;color:${lyricsColor};line-height:1.6;white-space:pre-wrap;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">${esc(mainLyrics || '가사 1~2줄')}</div>
+        <div style="position:relative;z-index:1;padding:1.8rem 1.2rem 0.8rem;display:flex;flex-direction:column;align-items:center;gap:0.7rem;">
+          <!-- 원형 앨범 이미지 -->
+          <div style="width:100px;height:100px;border-radius:50%;overflow:hidden;display:flex;align-items:center;justify-content:center;background:${albumFallback};box-shadow:0 4px 16px rgba(0,0,0,0.12);flex-shrink:0;">
+            ${albumHTML}
+          </div>
+          <!-- 제목 -->
+          <div style="text-align:center;width:100%;">
+            <div style="font-size:1rem;font-weight:700;color:${textColor};overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(mainTitle || '노래 제목')}</div>
+          </div>
+          <!-- 가사 -->
+          <div style="font-size:0.78rem;color:${lyricsColor};text-align:center;line-height:1.6;white-space:pre-wrap;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;width:100%;">${esc(mainLyrics || '가사 1~2줄')}</div>
         </div>
       </div>
+
+      <!-- 프로그레스 바 -->
+      <div style="padding:0.6rem 1.2rem 0.4rem;background:${bgColor};">
+        <div style="position:relative;height:3px;background:rgba(0,0,0,0.1);border-radius:3px;margin-bottom:0.35rem;">
+          <div style="width:${progressPct}%;height:100%;background:${accentColor};border-radius:3px;"></div>
+          <div style="position:absolute;top:50%;left:${progressPct}%;transform:translate(-50%,-50%);width:10px;height:10px;background:${accentColor};border-radius:50%;box-shadow:0 1px 3px rgba(0,0,0,0.2);"></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:0.68rem;color:${lyricsColor};">
+          <span>${esc(timeStart)}</span>
+          <span>${esc(timeEnd)}</span>
+        </div>
+      </div>
+
+      <!-- 컨트롤 버튼 -->
+      <div style="background:${bgColor};display:flex;align-items:center;justify-content:center;gap:1.2rem;padding:0.2rem 1rem 1.2rem;color:${accentColor};font-size:0.85rem;">
+        <i class="fa-solid fa-backward" style="font-size:0.7rem;opacity:0.4;"></i>
+        <i class="fa-solid fa-backward-step"></i>
+        <div style="width:34px;height:34px;border-radius:50%;border:2px solid ${accentColor};display:flex;align-items:center;justify-content:center;">
+          <i class="fa-solid fa-play" style="font-size:0.75rem;margin-left:2px;"></i>
+        </div>
+        <i class="fa-solid fa-forward-step"></i>
+        <i class="fa-solid fa-forward" style="font-size:0.7rem;opacity:0.4;"></i>
+      </div>
     </div>
   `;
 
-  // --- 프로그레스 바 ---
-  html += `
-    <div style="background:${bgColor};padding:0.8rem 1.4rem 0.5rem;">
-      <div style="position:relative;height:4px;background:rgba(0,0,0,0.1);border-radius:4px;margin-bottom:0.4rem;">
-        <div style="width:${progressPct}%;height:100%;background:${accentColor};border-radius:4px;transition:width 0.15s;"></div>
-        <div style="position:absolute;top:50%;left:${progressPct}%;transform:translate(-50%,-50%);width:12px;height:12px;background:${accentColor};border-radius:50%;box-shadow:0 1px 4px rgba(0,0,0,0.2);"></div>
-      </div>
-      <div style="display:flex;justify-content:space-between;font-size:0.72rem;color:${lyricsColor};">
-        <span>${esc(timeStart)}</span>
-        <span>${esc(timeEnd)}</span>
-      </div>
-    </div>
-  `;
-
-  // --- 컨트롤 버튼 ---
-  html += `
-    <div style="background:${bgColor};display:flex;align-items:center;justify-content:center;gap:1.6rem;padding:0.3rem 1.4rem 1.2rem;color:${accentColor};">
-      <i class="fa-solid fa-backward" style="font-size:0.85rem;opacity:0.5;"></i>
-      <i class="fa-solid fa-backward-step" style="font-size:1rem;"></i>
-      <div style="width:38px;height:38px;border-radius:50%;border:2px solid ${accentColor};display:flex;align-items:center;justify-content:center;">
-        <i class="fa-solid fa-play" style="font-size:0.85rem;margin-left:2px;color:${accentColor};"></i>
-      </div>
-      <i class="fa-solid fa-forward-step" style="font-size:1rem;"></i>
-      <i class="fa-solid fa-forward" style="font-size:0.85rem;opacity:0.5;"></i>
-    </div>
-  `;
-
-  // ========== 셋리스트 영역 ==========
+  // ===== 셋리스트 패널 =====
+  let setlistHTML = '';
   if (showSetlist) {
-    html += `<div style="background:${setlistBgColor};padding:1.2rem 1.4rem 0.8rem;">`;
+    let tracksContent = '';
 
-    // 곡 리스트
     if (state.tracks.length === 0) {
-      html += `<div style="font-size:0.82rem;color:${lyricsColor};text-align:center;padding:1.5rem 0;">곡을 추가하면 ��기에 표시됩니다</div>`;
+      tracksContent = `<div style="font-size:0.82rem;color:${lyricsColor};text-align:center;padding:2rem 0;">곡을 추가하면 여기에 표시됩니다</div>`;
     } else {
       state.tracks.forEach((track, idx) => {
         const trackAlbum = track.albumImg
-          ? `<div style="width:48px;height:48px;border-radius:6px;overflow:hidden;flex-shrink:0;margin-left:auto;"><img src="${esc(track.albumImg)}" style="width:100%;height:100%;object-fit:cover;" /></div>`
+          ? `<div style="width:44px;height:44px;border-radius:6px;overflow:hidden;flex-shrink:0;"><img src="${esc(track.albumImg)}" style="width:100%;height:100%;object-fit:cover;" /></div>`
           : '';
 
-        html += `
-          <div style="display:flex;align-items:center;gap:0.7rem;padding:0.7rem 0;">
-            <span style="font-size:0.88rem;font-weight:700;color:${lyricsColor};min-width:1.6rem;text-align:right;">${idx + 1}.</span>
+        tracksContent += `
+          <div style="display:flex;align-items:center;gap:0.6rem;padding:0.65rem 0;">
+            <span style="font-size:0.82rem;font-weight:700;color:${lyricsColor};min-width:1.4rem;text-align:right;">${idx + 1}.</span>
             <div style="flex:1;min-width:0;">
-              <div style="font-size:0.95rem;font-weight:600;color:${textColor};overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(track.title || '제목')}</div>
-              ${track.lyrics ? `<div style="font-size:0.78rem;color:${lyricsColor};margin-top:0.15rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(track.lyrics)}</div>` : ''}
+              <div style="font-size:0.9rem;font-weight:600;color:${textColor};overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(track.title || '제목')}</div>
+              ${track.lyrics ? `<div style="font-size:0.75rem;color:${lyricsColor};margin-top:0.1rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(track.lyrics)}</div>` : ''}
             </div>
             ${trackAlbum}
           </div>
-          <div style="height:2px;background:${dividerColor};border-radius:1px;"></div>
+          <div style="height:1px;background:${dividerColor};opacity:0.4;"></div>
         `;
       });
-
-      // 빈 구분선 슬롯 (최대 10곡까지 빈 줄 표시)
-      const emptySlots = Math.max(0, 3 - state.tracks.length);
-      for (let i = 0; i < emptySlots; i++) {
-        html += `<div style="padding:0.7rem 0;"></div><div style="height:2px;background:${dividerColor};border-radius:1px;opacity:0.3;"></div>`;
-      }
     }
 
-    // 하단 문구 (footer)
+    // footer
+    let footerHTML = '';
     if (footerText) {
-      html += `
-        <div style="margin-top:1rem;padding-top:0.6rem;text-align:center;font-size:0.7rem;color:${lyricsColor};opacity:0.5;letter-spacing:0.02em;">
+      footerHTML = `
+        <div style="margin-top:auto;padding-top:0.8rem;text-align:center;font-size:0.68rem;color:${lyricsColor};opacity:0.45;letter-spacing:0.02em;">
           ${esc(footerText)}
         </div>
       `;
     }
 
-    html += `</div>`; // 셋리스트 닫기
+    const setlistFlex = showSetlist && layout === 'horizontal' ? 'flex:1;min-width:0;' : 'width:100%;';
+
+    setlistHTML = `
+      <div style="background:${setlistBgColor};border-radius:16px;padding:1.2rem 1.3rem;display:flex;flex-direction:column;${setlistFlex}">
+        ${tracksContent}
+        ${footerHTML}
+      </div>
+    `;
   }
 
-  html += `</div>`; // .pl-cassette 닫기
+  // ===== 전체 조합 =====
+  let wrapperStyle = '';
+  if (showSetlist) {
+    if (layout === 'horizontal') {
+      wrapperStyle = 'display:flex;gap:0.8rem;align-items:stretch;';
+    } else {
+      wrapperStyle = 'display:flex;flex-direction:column;gap:0.8rem;';
+    }
+  }
+
+  const html = `
+    <div class="pl-cassette" style="font-family:${fontStack};${wrapperStyle}">
+      ${cassetteHTML}
+      ${setlistHTML}
+    </div>
+  `;
 
   document.getElementById('playlistPreview').innerHTML = html;
 }
@@ -376,7 +388,7 @@ ${preview.innerHTML}
 
 function saveJSON() {
   const data = {
-    version: 1,
+    version: 2,
     headerImg: state.headerImg,
     albumImg: state.albumImg,
     mainTitle: getVal('mainTitle'),
@@ -385,6 +397,7 @@ function saveJSON() {
     timeEnd: getVal('timeEnd'),
     progressPos: parseInt(getVal('progressPos'), 10) || 30,
     showSetlist: document.getElementById('setlistToggle')?.checked || false,
+    layoutDirection: getVal('layoutDirection'),
     tracks: state.tracks,
     footerText: getVal('footerText'),
     nextTrackId: state.nextTrackId,
@@ -429,6 +442,7 @@ function loadJSON(event) {
       setVal('progressPos', data.progressPos || 30);
       setVal('footerText', data.footerText);
       if (data.font) setVal('fontSelect', data.font);
+      if (data.layoutDirection) setVal('layoutDirection', data.layoutDirection);
       if (data.bgColor) setVal('bgColor', data.bgColor);
       if (data.setlistBgColor) setVal('setlistBgColor', data.setlistBgColor);
       if (data.textColor) setVal('textColor', data.textColor);
