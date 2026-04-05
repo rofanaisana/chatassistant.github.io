@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>플레이리스트 — Chat Backup</title>
+  <title>플레이리스��� — Chat Backup</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
   <link rel="stylesheet" href="css/style.css" />
 </head>
@@ -26,10 +26,8 @@
     </div>
 
     <div class="split-layout">
-      <!-- 편집 패널 -->
       <div class="editor-panel" id="editorPanel">
 
-        <!-- 기본 설정 -->
         <div class="section-block">
           <div class="section-title"><i class="fa-solid fa-sliders"></i> 기본 설정</div>
           <div class="form-group">
@@ -39,13 +37,6 @@
               <option value="RIDIBatang">리디바탕</option>
               <option value="Nanum Gothic">나눔고딕</option>
               <option value="Nanum Myeongjo">나눔명조</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label class="form-label">레이아웃 방향 (셋리스트 ON 시)</label>
-            <select id="layoutDirection" class="form-select" onchange="renderPreview()">
-              <option value="horizontal">가로 (카세트 좌 / 셋리스트 우)</option>
-              <option value="vertical">세로 (카세트 상 / 셋리스트 하)</option>
             </select>
           </div>
           <div class="node-row">
@@ -80,7 +71,6 @@
           </div>
         </div>
 
-        <!-- 카세트 테이프 -->
         <div class="accordion-section" id="accordionCassette">
           <div class="accordion-header" onclick="toggleAccordion('accordionCassette')">
             <span class="accordion-title"><i class="fa-solid fa-compact-disc"></i> 카세트 테이프</span>
@@ -88,7 +78,7 @@
           </div>
           <div class="accordion-body">
             <div class="form-group">
-              <label class="form-label">헤더 이미지 (배경 블러용)</label>
+              <label class="form-label">헤더 이미지 (카세트 상단 + 배경)</label>
               <div class="profile-img-upload">
                 <button class="btn btn-secondary btn-sm" onclick="document.getElementById('headerImgUpload').click()">
                   <i class="fa-solid fa-image"></i> 업로드
@@ -140,7 +130,6 @@
           </div>
         </div>
 
-        <!-- 셋리스트 -->
         <div class="accordion-section" id="accordionSetlist">
           <div class="accordion-header" onclick="toggleAccordion('accordionSetlist')">
             <span class="accordion-title"><i class="fa-solid fa-list-ol"></i> 셋리스트</span>
@@ -160,7 +149,6 @@
                 <i class="fa-solid fa-plus"></i> 곡 추가
               </button>
               <div class="text-muted" style="margin-top:6px;">최대 10곡</div>
-
               <div style="margin-top:1rem;border-top:1px solid #f0f2f5;padding-top:0.8rem;">
                 <div class="form-group">
                   <label class="form-label">하단 문구 (저작권 등)</label>
@@ -171,7 +159,6 @@
           </div>
         </div>
 
-        <!-- 내보내기 -->
         <div class="export-section">
           <div class="section-title"><i class="fa-solid fa-share-nodes"></i> 내보내기</div>
           <div class="btn-group">
@@ -192,7 +179,6 @@
         </div>
       </div>
 
-      <!-- 미리보기 패널 -->
       <div class="preview-panel" id="previewPanel">
         <div class="preview-inner" style="max-width:680px;">
           <div id="playlistPreview"></div>
