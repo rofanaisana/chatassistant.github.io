@@ -212,13 +212,10 @@ function buildCassette(opts) {
 
   return `
     <div style="border-radius:16px;overflow:visible;box-shadow:0 4px 20px rgba(0,0,0,0.1);width:500px;max-width:100%;">
-      <!-- 상단: 헤더 배경 -->
       <div style="position:relative;overflow:hidden;height:150px;border-radius:16px 16px 0 0;${hasHeaderImg ? `background-image:url('${state.headerImg}');background-size:cover;background-position:center;` : `background:${bgColor};`}"></div>
-      <!-- 앨범 원형 (경계에 걸침) -->
       <div style="position:absolute;left:24px;top:92px;z-index:10;width:105px;height:105px;border-radius:50%;overflow:hidden;display:flex;align-items:center;justify-content:center;background:${albumFallback};box-shadow:0 4px 20px rgba(0,0,0,0.2);">
         ${albumHTML}
       </div>
-      <!-- 하단: 다크 패널 -->
       <div style="background:#1a1a1a;padding:1rem 1.4rem 0.8rem 150px;color:#fff;border-radius:0 0 16px 16px;min-height:75px;display:flex;flex-direction:column;justify-content:center;">
         <div style="margin-bottom:0.4rem;">
           <div style="font-size:0.95rem;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(mainTitle || '노래 제목')}</div>
@@ -323,28 +320,34 @@ function renderPreview() {
     footerHTML = `<div style="padding-top:0.6rem;text-align:center;font-size:0.65rem;color:${lyricsColor};opacity:0.4;">${esc(footerText)}</div>`;
   }
 
-  // 셋리스트: 카세트 상단 헤더 옆에서부터 튀어나와 아래로 내려옴
-  // 카세트 좌측 정렬, 셋리스트는 카세트 우측 절반(250px) 지점부터 우측 끝까지
-  // 셋리스트 top은 헤더 상단(row 1)부터 시작하되, padding-top을 크게 줘서 1번 곡은 카세트 하단 아래에서 시작
+  // ========================================================
+  // 레이아웃:
+  //   - 셋리스트 흰 패널 상단: 카세트 헤더 중간(top:80px)에서 시작
+  //   - 셋리스트 좌측: 카세트 왼쪽 1/3 지점(left:160px)부터
+  //   - 셋리스트 우측: 배경 오른쪽 끝까지
+  //   - 곡 목록: 카세트 하단 아래에서 시작 (빈 공간 300px)
+  // ========================================================
   document.getElementById('playlistPreview').innerHTML = `
     <div class="pl-cassette" style="font-family:${fontStack};position:relative;overflow:hidden;padding:2rem;${hasHeaderImg ? '' : `background:${bgColor};`}">
       ${outerBg}
-      <div style="position:relative;z-index:1;display:grid;grid-template-columns:500px 1fr;grid-template-rows:auto auto;">
-        <!-- ���세트: col 1, row 1~2 -->
-        <div style="grid-column:1;grid-row:1 / 3;position:relative;z-index:3;">
+      <div style="position:relative;z-index:1;">
+        <!-- 카세트 (좌상단, z-index 높게) -->
+        <div style="position:relative;z-index:3;width:500px;max-width:100%;">
           <div style="position:relative;">
             ${buildCassette(cassetteOpts)}
           </div>
         </div>
-        <!-- 셋리스트: col 1~2, row 1~2 (카세트 위에 겹치되 우측으로 밀고, 상단 패딩으로 내용을 아래로) -->
-        <div style="grid-column:1 / 3;grid-row:1 / 3;z-index:2;margin-left:280px;padding-top:0;">
+        <!-- 셋리스트 (카세트 뒤에서 우측+하단으로 삐져나옴) -->
+        <div style="position:absolute;top:80px;left:160px;right:-16px;bottom:auto;z-index:2;">
           <div style="background:${setlistBgColor};border-radius:16px;padding:0 1.2rem 1rem;box-shadow:0 4px 20px rgba(0,0,0,0.06);min-height:200px;">
-            <!-- 빈 공간: 카세트 하단 아래까지 밀기 (헤더150 + 다크패널~130 - 약간 겹침 = 260px) -->
-            <div style="height:260px;"></div>
+            <!-- 빈 공간: 카세트 하단 아래까지 밀기 -->
+            <div style="height:300px;"></div>
             ${tracksContent}
             ${footerHTML}
           </div>
         </div>
+        <!-- 전체 높이 확보 (셋리스트가 absolute이므로) -->
+        <div style="height:${Math.max(200, 300 + state.tracks.length * 48 + 60)}px;"></div>
       </div>
     </div>
   `;
@@ -382,7 +385,7 @@ ${preview.innerHTML}
 
 function saveJSON() {
   const data = {
-    version: 10,
+    version: 11,
     headerImg: state.headerImg,
     albumImg: state.albumImg,
     mainTitle: getVal('mainTitle'),
