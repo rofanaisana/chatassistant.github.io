@@ -206,6 +206,18 @@ function escAttr(str) {
   return String(str).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 
+// ===================== OUTER BACKGROUND =====================
+// 바깥 배경: 헤더 이미지 → 블러 약하게 + 확대 / 없으면 배경색
+function outerBgHTML(hasHeaderImg, bgColor) {
+  if (hasHeaderImg) {
+    return `
+      <div style="position:absolute;inset:0;background-image:url('${state.headerImg}');background-size:cover;background-position:center;filter:blur(14px) brightness(0.75);transform:scale(1.15);z-index:0;"></div>
+      <div style="position:absolute;inset:0;background:${bgColor};opacity:0.2;z-index:0;"></div>
+    `;
+  }
+  return '';
+}
+
 // ===================== PREVIEW RENDER =====================
 function renderPreview() {
   const showSetlist = document.getElementById('setlistToggle')?.checked || false;
@@ -217,11 +229,9 @@ function renderPreview() {
   const timeEnd = getVal('timeEnd') || '04:10';
   const progressPct = Math.max(0, Math.min(100, parseInt(getVal('progressPos'), 10) || 30));
 
-  // 셋리스트 에디터 토글
   const setlistEditor = document.getElementById('setlistEditor');
   if (setlistEditor) setlistEditor.style.display = showSetlist ? '' : 'none';
 
-  // 색상
   const font = getVal('fontSelect') || 'Pretendard';
   const fontStack = getFontStack(font);
   const bgColor = getColor('bgColor', '#f8e8ee');
@@ -232,11 +242,7 @@ function renderPreview() {
   const dividerColor = getColor('dividerColor', '#cccccc');
   const albumFallback = getColor('albumFallbackColor', '#d4a0b0');
 
-  // 헤더 배경 (블러)
   const hasHeaderImg = !!state.headerImg;
-  const headerBgLayer = hasHeaderImg
-    ? `<div style="position:absolute;inset:0;background-image:url('${state.headerImg}');background-size:cover;background-position:center;filter:blur(20px) brightness(0.8) saturate(1.1);transform:scale(1.3);z-index:0;"></div>`
-    : '';
 
   // 앨범 원형
   const albumHTML = state.albumImg
@@ -244,43 +250,36 @@ function renderPreview() {
     : `<i class="fa-solid fa-music" style="font-size:2rem;color:rgba(255,255,255,0.5);"></i>`;
 
   // ===================================================================
-  // 카세트 테이프 (가로형 — 기획 레이아웃)
+  // 카세트 테이프 (가로형)
   //
-  //  ┌───────────────────────────────────────┐
-  //  │ ┌──────┐                               │ ← 상단: 헤더 이미지/색상 배경
-  //  │ │원형   │                               │    원형 이미지가 좌측에 크게
-  //  │ │이미지 │                               │
-  //  │ └──────┘                               │
-  //  ├───────────────────────────────────────┤
-  //  │        노래 제목                        │ ← 하단: 어두운 패널
-  //  │        가사 1~2줄                       │
-  //  │  ─────●━━━━━━━━━━━━━━━━━━━━━━━━────── │
-  //  │  00:00     ⏮  ▶  ⏭           04:10   │
-  //  └───────────────────────────────────────┘
+  //  ┌────────────────────────────────────┐
+  //  │ ┌─────┐   헤더 이미지 원본 (블러X)   │ ← 상단
+  //  │ │앨범  │                             │
+  //  │ └─────┘                             │
+  //  ├────────────────────────────────────┤
+  //  │       노래 제목                      │ ← 하단 (다크)
+  //  │       가사 / 프로그레스 / 컨트롤      │
+  //  └────────────────────────────────────┘
   // ===================================================================
 
+  const cassetteWidth = showSetlist && layout === 'horizontal' ? 'width:260px;flex-shrink:0;' : 'width:100%;';
+
   const cassetteHTML = `
-    <div style="border-radius:16px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,0.1);z-index:2;position:relative;${showSetlist && layout === 'horizontal' ? 'width:260px;flex-shrink:0;' : 'width:100%;'}">
-      <!-- ====== 상단: 헤더 배경 + 원형 앨범 ====== -->
-      <div style="position:relative;overflow:hidden;background:${bgColor};padding:1.4rem 1.2rem 1.2rem;display:flex;align-items:center;gap:1rem;">
-        ${headerBgLayer}
-        <div style="position:absolute;inset:0;background:${bgColor};opacity:${hasHeaderImg ? '0.35' : '1'};z-index:0;"></div>
-        <!-- 원형 앨범 (좌측) -->
-        <div style="position:relative;z-index:1;width:90px;height:90px;border-radius:50%;overflow:hidden;display:flex;align-items:center;justify-content:center;background:${albumFallback};box-shadow:0 4px 16px rgba(0,0,0,0.12);flex-shrink:0;">
+    <div style="border-radius:16px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,0.1);z-index:2;position:relative;${cassetteWidth}">
+      <!-- 상단: 헤더 이미지 원본 or 배경색 + 원형 앨범 -->
+      <div style="position:relative;overflow:hidden;height:140px;${hasHeaderImg ? `background-image:url('${state.headerImg}');background-size:cover;background-position:center;` : `background:${bgColor};`}">
+        <!-- 원형 앨범 (좌측 하단에 걸쳐서) -->
+        <div style="position:absolute;left:16px;bottom:-20px;z-index:3;width:90px;height:90px;border-radius:50%;overflow:hidden;display:flex;align-items:center;justify-content:center;background:${albumFallback};box-shadow:0 4px 16px rgba(0,0,0,0.15);">
           ${albumHTML}
         </div>
-        <!-- 빈 공간 (우측 — 헤더 이미지 표시 영역) -->
-        <div style="position:relative;z-index:1;flex:1;"></div>
       </div>
 
-      <!-- ====== 하단: 제목 + 가사 + 프로그레스 + 컨트롤 ====== -->
-      <div style="background:#1a1a1a;padding:0.9rem 1.2rem 0.8rem;color:#fff;">
-        <!-- 제목 & 가사 -->
+      <!-- 하단: 제목 + 가사 + 프로그레스 + 컨트롤 -->
+      <div style="background:#1a1a1a;padding:1.4rem 1.2rem 0.8rem;color:#fff;">
         <div style="text-align:center;margin-bottom:0.6rem;">
           <div style="font-size:0.95rem;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(mainTitle || '노래 제목')}</div>
           <div style="font-size:0.75rem;color:rgba(255,255,255,0.5);margin-top:0.2rem;line-height:1.5;white-space:pre-wrap;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">${esc(mainLyrics || '가사 1~2줄')}</div>
         </div>
-        <!-- 프로그레스 -->
         <div style="margin-bottom:0.3rem;">
           <div style="position:relative;height:3px;background:rgba(255,255,255,0.15);border-radius:3px;margin-bottom:0.3rem;">
             <div style="width:${progressPct}%;height:100%;background:rgba(255,255,255,0.6);border-radius:3px;"></div>
@@ -291,7 +290,6 @@ function renderPreview() {
             <span>${esc(timeEnd)}</span>
           </div>
         </div>
-        <!-- 컨트롤 -->
         <div style="display:flex;align-items:center;justify-content:center;gap:1rem;color:rgba(255,255,255,0.6);font-size:0.8rem;padding-top:0.1rem;">
           <i class="fa-solid fa-backward" style="font-size:0.6rem;opacity:0.5;"></i>
           <i class="fa-solid fa-backward-step"></i>
@@ -305,12 +303,11 @@ function renderPreview() {
     </div>
   `;
 
-  // ===== 카세트만 (셋리스트 OFF) =====
+  // ===== 카세트만 =====
   if (!showSetlist) {
-    // 바깥 배경도 헤더 이미지/색상
     document.getElementById('playlistPreview').innerHTML = `
       <div class="pl-cassette" style="font-family:${fontStack};position:relative;border-radius:20px;overflow:hidden;padding:2rem;${hasHeaderImg ? '' : `background:${bgColor};`}">
-        ${hasHeaderImg ? `<div style="position:absolute;inset:0;background-image:url('${state.headerImg}');background-size:cover;background-position:center;filter:blur(30px) brightness(0.7);transform:scale(1.2);z-index:0;"></div><div style="position:absolute;inset:0;background:${bgColor};opacity:0.3;z-index:0;"></div>` : ''}
+        ${outerBgHTML(hasHeaderImg, bgColor)}
         <div style="position:relative;z-index:1;display:flex;justify-content:center;">
           ${cassetteHTML}
         </div>
@@ -351,18 +348,17 @@ function renderPreview() {
     `;
   }
 
-  const setlistPanel = `
-    <div style="background:${setlistBgColor};border-radius:0 16px 16px 0;padding:1rem 1.2rem;display:flex;flex-direction:column;flex:1;min-width:0;margin-top:50px;margin-left:-14px;box-shadow:0 4px 20px rgba(0,0,0,0.06);z-index:1;overflow-y:auto;">
-      ${tracksContent}
-      ${footerHTML}
-    </div>
-  `;
-
-  // ===== 전체 조합 — 바깥 배경에도 헤더 이미지/색상 =====
+  // ===== 조합 =====
   if (layout === 'horizontal') {
+    const setlistPanel = `
+      <div style="background:${setlistBgColor};border-radius:0 16px 16px 0;padding:1rem 1.2rem;display:flex;flex-direction:column;flex:1;min-width:0;margin-top:50px;margin-left:-14px;box-shadow:0 4px 20px rgba(0,0,0,0.06);z-index:1;overflow-y:auto;">
+        ${tracksContent}
+        ${footerHTML}
+      </div>
+    `;
     document.getElementById('playlistPreview').innerHTML = `
       <div class="pl-cassette" style="font-family:${fontStack};position:relative;border-radius:20px;overflow:hidden;padding:1.5rem;${hasHeaderImg ? '' : `background:${bgColor};`}">
-        ${hasHeaderImg ? `<div style="position:absolute;inset:0;background-image:url('${state.headerImg}');background-size:cover;background-position:center;filter:blur(30px) brightness(0.7);transform:scale(1.2);z-index:0;"></div><div style="position:absolute;inset:0;background:${bgColor};opacity:0.3;z-index:0;"></div>` : ''}
+        ${outerBgHTML(hasHeaderImg, bgColor)}
         <div style="position:relative;z-index:1;display:flex;align-items:flex-start;">
           ${cassetteHTML}
           ${setlistPanel}
@@ -370,12 +366,11 @@ function renderPreview() {
       </div>
     `;
   } else {
-    // 세로 모드
     document.getElementById('playlistPreview').innerHTML = `
       <div class="pl-cassette" style="font-family:${fontStack};position:relative;border-radius:20px;overflow:hidden;padding:1.5rem;${hasHeaderImg ? '' : `background:${bgColor};`}">
-        ${hasHeaderImg ? `<div style="position:absolute;inset:0;background-image:url('${state.headerImg}');background-size:cover;background-position:center;filter:blur(30px) brightness(0.7);transform:scale(1.2);z-index:0;"></div><div style="position:absolute;inset:0;background:${bgColor};opacity:0.3;z-index:0;"></div>` : ''}
+        ${outerBgHTML(hasHeaderImg, bgColor)}
         <div style="position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;">
-          ${cassetteHTML.replace(showSetlist && layout === 'horizontal' ? 'width:260px;flex-shrink:0;' : 'width:100%;', 'width:100%;max-width:320px;')}
+          ${cassetteHTML.replace(cassetteWidth, 'width:100%;max-width:320px;')}
           <div style="background:${setlistBgColor};border-radius:16px;padding:1.2rem 1.3rem;width:100%;margin-top:-20px;padding-top:2rem;box-shadow:0 4px 20px rgba(0,0,0,0.06);z-index:1;display:flex;flex-direction:column;">
             ${tracksContent}
             ${footerHTML}
@@ -418,7 +413,7 @@ ${preview.innerHTML}
 
 function saveJSON() {
   const data = {
-    version: 4,
+    version: 5,
     headerImg: state.headerImg,
     albumImg: state.albumImg,
     mainTitle: getVal('mainTitle'),
