@@ -3,45 +3,192 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Chat Backup</title>
+  <title>플레이리스트 — Chat Backup</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
   <link rel="stylesheet" href="css/style.css" />
 </head>
-<body>
-  <div class="landing-wrapper">
-    <div class="card-grid">
-      <a href="messenger.html" class="tool-card">
-        <span class="card-icon">📱</span>
-        <h2>메신저 대화</h2>
-        <p>카카오톡, LINE, Twitter DM 스타일로 캐릭터 간 대화를 시각화하고 이미지/HTML로 저장하세요.</p>
-        <span class="card-btn"><i class="fa-solid fa-arrow-right"></i> 사용하기</span>
+<body class="split-page">
+  <div class="page-wrapper">
+    <header class="page-header">
+      <a href="index.html" class="back-link">
+        <i class="fa-solid fa-chevron-left"></i> 메인으로
       </a>
+      <h1>🎵 플레이리스트</h1>
+    </header>
 
-      <a href="timeline.html" class="tool-card">
-        <span class="card-icon">📅</span>
-        <h2>타임라인</h2>
-        <p>시간 순서대로 정리하는 타임라인을 만들고 이미지/HTML로 저장하세요.</p>
-        <span class="card-btn"><i class="fa-solid fa-arrow-right"></i> 사용하기</span>
-      </a>
-
-      <a href="playlist.html" class="tool-card">
-        <span class="card-icon">🎵</span>
-        <h2>플레이리스트</h2>
-        <p>카세트 테이프 스타일의 플레이리스트를 만들고 셋리스트와 함께 이미지로 저장하세요.</p>
-        <span class="card-btn"><i class="fa-solid fa-arrow-right"></i> 사용하기</span>
-      </a>
-
-      <a href="viewer.html" class="tool-card">
-        <span class="card-icon">🖥️</span>
-        <h2>HTML 뷰어</h2>
-        <p>HTML 코드를 입력하면 실시간으로 미리보기를 제공합니다.</p>
-        <span class="card-btn"><i class="fa-solid fa-arrow-right"></i> 사용하기</span>
-      </a>
+    <div class="mobile-tabs">
+      <button class="mobile-tab-btn active" data-tab="editor" onclick="switchTab('editor')">
+        <i class="fa-solid fa-pen-to-square"></i> 편집
+      </button>
+      <button class="mobile-tab-btn" data-tab="preview" onclick="switchTab('preview')">
+        <i class="fa-solid fa-eye"></i> 미리보기
+      </button>
     </div>
 
-    <footer class="landing-footer">
-      <p>Chat Backup &copy; 2026 &mdash; GitHub Pages</p>
-    </footer>
+    <div class="split-layout">
+      <!-- 편집 패널 -->
+      <div class="editor-panel" id="editorPanel">
+
+        <!-- 기본 설정 -->
+        <div class="section-block">
+          <div class="section-title"><i class="fa-solid fa-sliders"></i> 기본 설정</div>
+          <div class="form-group">
+            <label class="form-label">글꼴 선택</label>
+            <select id="fontSelect" class="form-select" onchange="renderPreview()">
+              <option value="Pretendard">Pretendard (기본)</option>
+              <option value="RIDIBatang">리디바탕</option>
+              <option value="Nanum Gothic">나눔고딕</option>
+              <option value="Nanum Myeongjo">나눔명조</option>
+            </select>
+          </div>
+          <div class="node-row">
+            <div class="form-group">
+              <label class="form-label">배경색</label>
+              <input type="color" id="bgColor" value="#1a1a2e" oninput="renderPreview()" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">글자색</label>
+              <input type="color" id="textColor" value="#ffffff" oninput="renderPreview()" />
+            </div>
+          </div>
+          <div class="node-row">
+            <div class="form-group">
+              <label class="form-label">강조색 (프로그레스/구분선)</label>
+              <input type="color" id="accentColor" value="#e8e8e8" oninput="renderPreview()" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">가사 글자색</label>
+              <input type="color" id="lyricsColor" value="#bbbbbb" oninput="renderPreview()" />
+            </div>
+          </div>
+        </div>
+
+        <!-- 카세트 테이프 -->
+        <div class="accordion-section" id="accordionCassette">
+          <div class="accordion-header" onclick="toggleAccordion('accordionCassette')">
+            <span class="accordion-title"><i class="fa-solid fa-compact-disc"></i> 카세트 테이프</span>
+            <i class="fa-solid fa-chevron-down accordion-toggle-icon"></i>
+          </div>
+          <div class="accordion-body">
+            <div class="form-group">
+              <label class="form-label">헤더 이미지 (배경 블러용)</label>
+              <div class="profile-img-upload">
+                <button class="btn btn-secondary btn-sm" onclick="document.getElementById('headerImgUpload').click()">
+                  <i class="fa-solid fa-image"></i> 업로드
+                </button>
+                <button class="btn btn-danger btn-sm" id="headerImgRemoveBtn" style="display:none" onclick="removeHeaderImg()">
+                  <i class="fa-solid fa-trash"></i> 삭제
+                </button>
+                <input type="file" id="headerImgUpload" accept="image/*" style="display:none" onchange="handleHeaderImg(this)" />
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">앨범 이미지 (원형)</label>
+              <div class="profile-img-upload">
+                <button class="btn btn-secondary btn-sm" onclick="document.getElementById('albumImgUpload').click()">
+                  <i class="fa-solid fa-image"></i> 업로드
+                </button>
+                <button class="btn btn-danger btn-sm" id="albumImgRemoveBtn" style="display:none" onclick="removeAlbumImg()">
+                  <i class="fa-solid fa-trash"></i> 삭제
+                </button>
+                <input type="file" id="albumImgUpload" accept="image/*" style="display:none" onchange="handleAlbumImg(this)" />
+              </div>
+              <div style="margin-top:0.4rem;">
+                <label class="form-label">이미지 없을 때 배경색</label>
+                <input type="color" id="albumFallbackColor" value="#4A90D9" oninput="renderPreview()" />
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">노래 제목</label>
+              <input type="text" id="mainTitle" class="form-input" placeholder="노래 제목" oninput="renderPreview()" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">아티스트</label>
+              <input type="text" id="mainArtist" class="form-input" placeholder="아티스트명" oninput="renderPreview()" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">가사 (1~2줄)</label>
+              <textarea id="mainLyrics" class="form-textarea" rows="2" placeholder="가사를 입력하세요" oninput="renderPreview()"></textarea>
+            </div>
+            <div class="node-row">
+              <div class="form-group">
+                <label class="form-label">시작 시간</label>
+                <input type="text" id="timeStart" class="form-input" value="00:00" placeholder="00:00" oninput="renderPreview()" />
+              </div>
+              <div class="form-group">
+                <label class="form-label">종료 시간</label>
+                <input type="text" id="timeEnd" class="form-input" value="04:10" placeholder="04:10" oninput="renderPreview()" />
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">프로그레스 위치 (%)</label>
+              <input type="range" id="progressPos" min="0" max="100" value="30" oninput="renderPreview()" />
+            </div>
+          </div>
+        </div>
+
+        <!-- 셋리스트 -->
+        <div class="accordion-section" id="accordionSetlist">
+          <div class="accordion-header" onclick="toggleAccordion('accordionSetlist')">
+            <span class="accordion-title"><i class="fa-solid fa-list-ol"></i> 셋리스트</span>
+            <i class="fa-solid fa-chevron-down accordion-toggle-icon"></i>
+          </div>
+          <div class="accordion-body">
+            <div class="toggle-row" style="margin-bottom:0.8rem;">
+              <span class="toggle-label">셋리스트 추가하기</span>
+              <label class="toggle-switch">
+                <input type="checkbox" id="setlistToggle" onchange="renderPreview()" />
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+            <div id="setlistEditor" style="display:none;">
+              <div id="trackList"></div>
+              <button class="btn btn-primary btn-sm" id="addTrackBtn" onclick="addTrack()">
+                <i class="fa-solid fa-plus"></i> 곡 추가
+              </button>
+              <div class="text-muted" style="margin-top:6px;">최대 10곡</div>
+
+              <div style="margin-top:1rem;border-top:1px solid #f0f2f5;padding-top:0.8rem;">
+                <div class="form-group">
+                  <label class="form-label">하단 문구 (저작권 등)</label>
+                  <input type="text" id="footerText" class="form-input" placeholder="예: © 2026 All rights reserved" oninput="renderPreview()" />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 내보내기 -->
+        <div class="export-section">
+          <div class="section-title"><i class="fa-solid fa-share-nodes"></i> 내보내기</div>
+          <div class="btn-group">
+            <button class="btn btn-secondary btn-sm" onclick="copyHTML()">
+              <i class="fa-solid fa-code"></i> HTML 복사
+            </button>
+            <button class="btn btn-secondary btn-sm" onclick="saveJSON()">
+              <i class="fa-solid fa-download"></i> JSON 저장
+            </button>
+            <button class="btn btn-secondary btn-sm" onclick="document.getElementById('loadFile').click()">
+              <i class="fa-solid fa-upload"></i> 불러오기
+            </button>
+            <button class="btn btn-primary btn-sm" onclick="saveImage()">
+              <i class="fa-solid fa-image"></i> 이미지 저장
+            </button>
+          </div>
+          <input type="file" id="loadFile" accept=".json" style="display:none" onchange="loadJSON(event)" />
+        </div>
+      </div>
+
+      <!-- 미리보기 패널 -->
+      <div class="preview-panel" id="previewPanel">
+        <div class="preview-inner" style="max-width:420px;">
+          <div id="playlistPreview"></div>
+        </div>
+      </div>
+    </div>
   </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+  <script src="js/playlist.js"></script>
 </body>
 </html>
