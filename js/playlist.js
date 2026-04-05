@@ -209,39 +209,34 @@ function escAttr(str) {
 // ===================== BUILD CASSETTE HTML =====================
 function buildCassette(opts) {
   const { hasHeaderImg, bgColor, albumFallback, albumHTML, mainTitle, mainLyrics, progressPct, timeStart, timeEnd } = opts;
-
   return `
-    <div style="border-radius:16px;overflow:visible;box-shadow:0 4px 20px rgba(0,0,0,0.1);position:relative;width:100%;max-width:320px;flex-shrink:0;z-index:3;">
-      <!-- 상단: 헤더 이미지 원본 or 배경색 -->
-      <div style="position:relative;overflow:hidden;height:140px;border-radius:16px 16px 0 0;${hasHeaderImg ? `background-image:url('${state.headerImg}');background-size:cover;background-position:center;` : `background:${bgColor};`}"></div>
-      <!-- 앨범 이미지 -->
-      <div style="position:absolute;left:20px;top:85px;z-index:10;width:90px;height:90px;border-radius:50%;overflow:hidden;display:flex;align-items:center;justify-content:center;background:${albumFallback};box-shadow:0 4px 16px rgba(0,0,0,0.18);">
+    <div style="border-radius:16px;overflow:visible;box-shadow:0 4px 20px rgba(0,0,0,0.1);width:280px;flex-shrink:0;">
+      <div style="position:relative;overflow:hidden;height:130px;border-radius:16px 16px 0 0;${hasHeaderImg ? `background-image:url('${state.headerImg}');background-size:cover;background-position:center;` : `background:${bgColor};`}"></div>
+      <div style="position:absolute;left:20px;top:80px;z-index:10;width:85px;height:85px;border-radius:50%;overflow:hidden;display:flex;align-items:center;justify-content:center;background:${albumFallback};box-shadow:0 4px 16px rgba(0,0,0,0.18);">
         ${albumHTML}
       </div>
-      <!-- 하단: 다크 패널 -->
-      <div style="background:#1a1a1a;padding:1.4rem 1.2rem 0.8rem;color:#fff;border-radius:0 0 16px 16px;">
-        <div style="text-align:center;margin-bottom:0.6rem;">
-          <div style="font-size:0.95rem;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(mainTitle || '노래 제목')}</div>
-          <div style="font-size:0.75rem;color:rgba(255,255,255,0.5);margin-top:0.2rem;line-height:1.5;white-space:pre-wrap;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">${esc(mainLyrics || '가사 1~2줄')}</div>
+      <div style="background:#1a1a1a;padding:1.3rem 1rem 0.7rem;color:#fff;border-radius:0 0 16px 16px;">
+        <div style="text-align:center;margin-bottom:0.5rem;">
+          <div style="font-size:0.9rem;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(mainTitle || '노래 제목')}</div>
+          <div style="font-size:0.72rem;color:rgba(255,255,255,0.5);margin-top:0.15rem;line-height:1.5;white-space:pre-wrap;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">${esc(mainLyrics || '가사 1~2줄')}</div>
         </div>
-        <div style="margin-bottom:0.3rem;">
-          <div style="position:relative;height:3px;background:rgba(255,255,255,0.15);border-radius:3px;margin-bottom:0.3rem;">
+        <div style="margin-bottom:0.25rem;">
+          <div style="position:relative;height:3px;background:rgba(255,255,255,0.15);border-radius:3px;margin-bottom:0.25rem;">
             <div style="width:${progressPct}%;height:100%;background:rgba(255,255,255,0.6);border-radius:3px;"></div>
-            <div style="position:absolute;top:50%;left:${progressPct}%;transform:translate(-50%,-50%);width:10px;height:10px;background:#fff;border-radius:50%;box-shadow:0 1px 3px rgba(0,0,0,0.3);"></div>
+            <div style="position:absolute;top:50%;left:${progressPct}%;transform:translate(-50%,-50%);width:9px;height:9px;background:#fff;border-radius:50%;box-shadow:0 1px 3px rgba(0,0,0,0.3);"></div>
           </div>
-          <div style="display:flex;justify-content:space-between;font-size:0.63rem;color:rgba(255,255,255,0.4);">
-            <span>${esc(timeStart)}</span>
-            <span>${esc(timeEnd)}</span>
+          <div style="display:flex;justify-content:space-between;font-size:0.6rem;color:rgba(255,255,255,0.4);">
+            <span>${esc(timeStart)}</span><span>${esc(timeEnd)}</span>
           </div>
         </div>
-        <div style="display:flex;align-items:center;justify-content:center;gap:1rem;color:rgba(255,255,255,0.6);font-size:0.8rem;padding-top:0.1rem;">
-          <i class="fa-solid fa-backward" style="font-size:0.6rem;opacity:0.5;"></i>
+        <div style="display:flex;align-items:center;justify-content:center;gap:0.9rem;color:rgba(255,255,255,0.6);font-size:0.75rem;padding-top:0.1rem;">
+          <i class="fa-solid fa-backward" style="font-size:0.55rem;opacity:0.5;"></i>
           <i class="fa-solid fa-backward-step"></i>
-          <div style="width:30px;height:30px;border-radius:50%;border:2px solid rgba(255,255,255,0.6);display:flex;align-items:center;justify-content:center;">
-            <i class="fa-solid fa-play" style="font-size:0.65rem;margin-left:2px;"></i>
+          <div style="width:28px;height:28px;border-radius:50%;border:2px solid rgba(255,255,255,0.6);display:flex;align-items:center;justify-content:center;">
+            <i class="fa-solid fa-play" style="font-size:0.6rem;margin-left:2px;"></i>
           </div>
           <i class="fa-solid fa-forward-step"></i>
-          <i class="fa-solid fa-forward" style="font-size:0.6rem;opacity:0.5;"></i>
+          <i class="fa-solid fa-forward" style="font-size:0.55rem;opacity:0.5;"></i>
         </div>
       </div>
     </div>
@@ -273,13 +268,13 @@ function renderPreview() {
 
   const albumHTML = state.albumImg
     ? `<img src="${esc(state.albumImg)}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;" />`
-    : `<i class="fa-solid fa-music" style="font-size:2rem;color:rgba(255,255,255,0.5);"></i>`;
+    : `<i class="fa-solid fa-music" style="font-size:1.8rem;color:rgba(255,255,255,0.5);"></i>`;
 
   const outerBg = hasHeaderImg
     ? `<div style="position:absolute;inset:0;background-image:url('${state.headerImg}');background-size:cover;background-position:center;filter:blur(14px) brightness(0.75);transform:scale(1.15);z-index:0;"></div><div style="position:absolute;inset:0;background:${bgColor};opacity:0.2;z-index:0;"></div>`
     : '';
 
-  const cassetteHTML = buildCassette({ hasHeaderImg, bgColor, albumFallback, albumHTML, mainTitle, mainLyrics, progressPct, timeStart, timeEnd });
+  const cassetteOpts = { hasHeaderImg, bgColor, albumFallback, albumHTML, mainTitle, mainLyrics, progressPct, timeStart, timeEnd };
 
   // ===== 카세트만 =====
   if (!showSetlist) {
@@ -287,7 +282,9 @@ function renderPreview() {
       <div class="pl-cassette" style="font-family:${fontStack};position:relative;overflow:hidden;padding:2rem;${hasHeaderImg ? '' : `background:${bgColor};`}">
         ${outerBg}
         <div style="position:relative;z-index:1;display:flex;justify-content:center;">
-          ${cassetteHTML}
+          <div style="position:relative;">
+            ${buildCassette(cassetteOpts)}
+          </div>
         </div>
       </div>
     `;
@@ -301,14 +298,14 @@ function renderPreview() {
   } else {
     state.tracks.forEach((track, idx) => {
       const trackAlbum = track.albumImg
-        ? `<div style="width:40px;height:40px;border-radius:6px;overflow:hidden;flex-shrink:0;"><img src="${esc(track.albumImg)}" style="width:100%;height:100%;object-fit:cover;" /></div>`
+        ? `<div style="width:38px;height:38px;border-radius:6px;overflow:hidden;flex-shrink:0;"><img src="${esc(track.albumImg)}" style="width:100%;height:100%;object-fit:cover;" /></div>`
         : '';
       tracksContent += `
-        <div style="display:flex;align-items:center;gap:0.6rem;padding:0.55rem 0;">
-          <span style="font-size:0.8rem;font-weight:700;color:${lyricsColor};min-width:1.6rem;text-align:right;">${idx + 1}.</span>
+        <div style="display:flex;align-items:center;gap:0.5rem;padding:0.5rem 0;">
+          <span style="font-size:0.78rem;font-weight:700;color:${lyricsColor};min-width:1.4rem;text-align:right;">${idx + 1}.</span>
           <div style="flex:1;min-width:0;">
-            <div style="font-size:0.85rem;font-weight:600;color:${textColor};overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(track.title || '제목')}</div>
-            ${track.lyrics ? `<div style="font-size:0.72rem;color:${lyricsColor};margin-top:0.08rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(track.lyrics)}</div>` : ''}
+            <div style="font-size:0.82rem;font-weight:600;color:${textColor};overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(track.title || '제목')}</div>
+            ${track.lyrics ? `<div style="font-size:0.7rem;color:${lyricsColor};margin-top:0.05rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(track.lyrics)}</div>` : ''}
           </div>
           ${trackAlbum}
         </div>
@@ -319,28 +316,31 @@ function renderPreview() {
 
   let footerHTML = '';
   if (footerText) {
-    footerHTML = `<div style="margin-top:auto;padding-top:0.8rem;text-align:center;font-size:0.65rem;color:${lyricsColor};opacity:0.4;">${esc(footerText)}</div>`;
+    footerHTML = `<div style="padding-top:0.6rem;text-align:center;font-size:0.62rem;color:${lyricsColor};opacity:0.4;">${esc(footerText)}</div>`;
   }
 
-  // 셋리스트 패널: position:absolute 로 카세트 우측 + 하단에서 시작
-  // 카세트 높이 ≈ 140 + 160 = 300px
-  // 셋리스트 top을 카세트 하단 바로 위(~200px)에서 시작하면 카세트 하단 영역과 겹침
-  // ��리스트 left를 카세트 우측에 겹치게(~55%)
+  // ===== 겹침 레이아웃: CSS Grid 사용 =====
+  // 카세트: row 1~2, col 1
+  // 셋리스트: row 2~3, col 1~2 (카세트 하단과 겹치면서 우측으로 확장)
   document.getElementById('playlistPreview').innerHTML = `
-    <div class="pl-cassette" style="font-family:${fontStack};position:relative;overflow:hidden;${hasHeaderImg ? '' : `background:${bgColor};`}padding:2rem 1.5rem 2rem 1.5rem;">
+    <div class="pl-cassette" style="font-family:${fontStack};position:relative;overflow:hidden;padding:2rem 1.5rem;${hasHeaderImg ? '' : `background:${bgColor};`}">
       ${outerBg}
-      <div style="position:relative;z-index:1;">
-        <!-- 카세트 (좌상단, z-index 높게) -->
-        <div style="position:relative;z-index:3;width:fit-content;">
-          ${cassetteHTML}
+      <div style="position:relative;z-index:1;display:grid;grid-template-columns:280px 1fr;grid-template-rows:auto auto auto;">
+        <!-- 카세트: row 1-2, col 1 -->
+        <div style="grid-column:1;grid-row:1 / 3;position:relative;z-index:3;">
+          ${buildCassette(cassetteOpts)}
         </div>
-        <!-- 셋리스트 (absolute, 우측으로 뻗고 카세트 하단 근처에서 시작) -->
-        <div style="position:absolute;top:200px;left:45%;right:0;z-index:2;background:${setlistBgColor};border-radius:16px;padding:1rem 1.2rem;box-shadow:0 4px 20px rgba(0,0,0,0.06);min-height:200px;display:flex;flex-direction:column;">
-          ${tracksContent}
-          ${footerHTML}
+        <!-- 빈 공간: row 1, col 2 (카세트 상단 옆은 비워둠) -->
+        <div style="grid-column:2;grid-row:1;"></div>
+        <!-- 셋리스트: row 2-3, col 1-2 (카세트 하단과 겹침 + 우측 확장) -->
+        <div style="grid-column:1 / 3;grid-row:2 / 4;z-index:2;padding-left:50px;padding-top:20px;">
+          <div style="background:${setlistBgColor};border-radius:16px;padding:1rem 1.2rem;box-shadow:0 4px 20px rgba(0,0,0,0.06);min-height:160px;">
+            ${tracksContent}
+            ${footerHTML}
+          </div>
         </div>
-        <!-- 셋리스트 높이만큼 공간 확보용 -->
-        <div style="margin-left:45%;padding-top:${Math.max(120, state.tracks.length * 42 + 60)}px;"></div>
+        <!-- 하단 여백: row 3 -->
+        <div style="grid-column:1;grid-row:3;"></div>
       </div>
     </div>
   `;
@@ -378,7 +378,7 @@ ${preview.innerHTML}
 
 function saveJSON() {
   const data = {
-    version: 7,
+    version: 8,
     headerImg: state.headerImg,
     albumImg: state.albumImg,
     mainTitle: getVal('mainTitle'),
