@@ -320,34 +320,33 @@ function renderPreview() {
     footerHTML = `<div style="padding-top:0.6rem;text-align:center;font-size:0.65rem;color:${lyricsColor};opacity:0.4;">${esc(footerText)}</div>`;
   }
 
-  // ========================================================
-  // 레이아웃:
-  //   - 셋리스트 흰 패널 상단: 카세트 헤더 중간(top:80px)에서 시작
-  //   - 셋리스트 좌측: 카세트 왼쪽 1/3 지점(left:160px)부터
-  //   - 셋리스트 우측: 배경 오른쪽 끝까지
-  //   - 곡 목록: 카세트 하단 아래에서 시작 (빈 공간 300px)
-  // ========================================================
+  // 카세트 높이: 헤더 150 + 다크 ~120 = ~270px (top:0 기준)
+  // 셋리스트 top:80px, 빈 공간 220px → 1번 곡 시작 = 80+220 = 300px �� 카세트 하단 바로 아래
+  // 전체 높이: 셋리스트 absolute이므로 spacer div 필요
+  // spacer = 셋리스트 top(80) + 빈 공간(220) + 트랙 영역 + 패딩 - 카세트 높이(270)
+  const trackAreaHeight = Math.max(80, state.tracks.length * 46 + 40);
+  const spacerHeight = 80 + 220 + trackAreaHeight - 270 + 16;
+
   document.getElementById('playlistPreview').innerHTML = `
     <div class="pl-cassette" style="font-family:${fontStack};position:relative;overflow:hidden;padding:2rem;${hasHeaderImg ? '' : `background:${bgColor};`}">
       ${outerBg}
       <div style="position:relative;z-index:1;">
-        <!-- 카세트 (좌상단, z-index 높게) -->
+        <!-- 카세트 -->
         <div style="position:relative;z-index:3;width:500px;max-width:100%;">
           <div style="position:relative;">
             ${buildCassette(cassetteOpts)}
           </div>
         </div>
-        <!-- 셋리스트 (카세트 뒤에서 우측+하단으로 삐져나옴) -->
-        <div style="position:absolute;top:80px;left:160px;right:-16px;bottom:auto;z-index:2;">
-          <div style="background:${setlistBgColor};border-radius:16px;padding:0 1.2rem 1rem;box-shadow:0 4px 20px rgba(0,0,0,0.06);min-height:200px;">
-            <!-- 빈 공간: 카세트 하단 아래까지 밀기 -->
-            <div style="height:300px;"></div>
+        <!-- 셋리스트 -->
+        <div style="position:absolute;top:80px;left:160px;right:-16px;z-index:2;">
+          <div style="background:${setlistBgColor};border-radius:16px;padding:0 1.2rem 1rem;box-shadow:0 4px 20px rgba(0,0,0,0.06);">
+            <div style="height:220px;"></div>
             ${tracksContent}
             ${footerHTML}
           </div>
         </div>
-        <!-- 전체 높이 확보 (셋리스트가 absolute이므로) -->
-        <div style="height:${Math.max(200, 300 + state.tracks.length * 48 + 60)}px;"></div>
+        <!-- 높이 확보 spacer -->
+        <div style="height:${Math.max(0, spacerHeight)}px;"></div>
       </div>
     </div>
   `;
@@ -385,7 +384,7 @@ ${preview.innerHTML}
 
 function saveJSON() {
   const data = {
-    version: 11,
+    version: 12,
     headerImg: state.headerImg,
     albumImg: state.albumImg,
     mainTitle: getVal('mainTitle'),
