@@ -8,6 +8,8 @@ const state = {
 
 // ===================== INIT =====================
 document.addEventListener('DOMContentLoaded', () => {
+  // 전역 글꼴로 <select> 채우기
+  populateFontSelect('fontSelect', 'Pretendard');
   renderPreview();
 });
 
@@ -183,16 +185,6 @@ function getColor(id, fallback) {
   return /^#[0-9a-fA-F]{6}$/.test(val) ? val : fallback;
 }
 
-function getFontStack(font) {
-  const stacks = {
-    'Pretendard': "'Pretendard', 'Noto Sans KR', -apple-system, BlinkMacSystemFont, system-ui, sans-serif",
-    'RIDIBatang': "'RIDIBatang', 'Noto Sans KR', serif",
-    'Nanum Gothic': "'Nanum Gothic', 'Noto Sans KR', sans-serif",
-    'Nanum Myeongjo': "'Nanum Myeongjo', 'Noto Sans KR', serif",
-  };
-  return stacks[font] || stacks['Pretendard'];
-}
-
 function setVal(id, val) {
   const el = document.getElementById(id);
   if (el) el.value = val ?? '';
@@ -206,7 +198,6 @@ function escAttr(str) {
   return String(str).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 
-// 색상의 밝기 판단 → 밝으면 어두운 컨트롤, 어두우면 밝은 컨트롤
 function isLightColor(hex) {
   const r = parseInt(hex.slice(1,3), 16);
   const g = parseInt(hex.slice(3,5), 16);
@@ -217,23 +208,21 @@ function isLightColor(hex) {
 // ===================== BUILD CASSETTE (500px) =====================
 function buildCassette(opts) {
   const { hasHeaderImg, bgColor, albumFallback, albumHTML, mainTitle, mainLyrics, progressPct, timeStart, timeEnd, playerBg, playerText } = opts;
-
-  // 플레이어 글자색 기반으로 반투명 색상 생성
-  const textSub = playerText + '80'; // 50% 투명
-  const textFaint = playerText + '40'; // 25% 투명
-  const textBar = playerText + '26'; // 15% 투명
-  const textBarFill = playerText + '99'; // 60% 투명
+  const textSub = playerText + '80';
+  const textFaint = playerText + '40';
+  const textBar = playerText + '26';
+  const textBarFill = playerText + '99';
 
   return `
     <div style="border-radius:16px;overflow:visible;box-shadow:0 4px 20px rgba(0,0,0,0.1);width:500px;max-width:100%;">
       <div style="position:relative;overflow:hidden;height:150px;border-radius:16px 16px 0 0;${hasHeaderImg ? `background-image:url('${state.headerImg}');background-size:cover;background-position:center;` : `background:${bgColor};`}"></div>
-      <div style="position:absolute;left:24px;top:92px;z-index:10;width:105px;height:105px;border-radius:50%;overflow:hidden;display:flex;align-items:center;justify-content:center;background:${albumFallback};box-shadow:0 4px 20px rgba(0,0,0,0.2);">
+      <div style="position:absolute;left:24px;top:92px;z-index:10;width:105px;height:105px;border-radius:50%;overflow:hidden;display:flex;align-items:center;justify-content:center;background:${albumFallback};box-shadow:0 4px 16px rgba(0,0,0,0.2);">
         ${albumHTML}
       </div>
       <div style="background:${playerBg};padding:1rem 1.4rem 0.8rem 150px;color:${playerText};border-radius:0 0 16px 16px;min-height:75px;display:flex;flex-direction:column;justify-content:center;">
         <div style="margin-bottom:0.4rem;">
           <div style="font-size:0.95rem;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(mainTitle || '노래 제목')}</div>
-          <div style="font-size:0.75rem;color:${textSub};margin-top:0.12rem;line-height:1.5;white-space:pre-wrap;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">${esc(mainLyrics || '가사 1~2줄')}</div>
+          <div style="font-size:0.75rem;color:${textSub};margin-top:0.12rem;line-height:1.5;white-space:pre-wrap;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">${esc(mainLyrics || '')}</div>
         </div>
         <div style="margin-bottom:0.25rem;">
           <div style="position:relative;height:3px;background:${textBar};border-radius:3px;margin-bottom:0.2rem;">
@@ -261,10 +250,7 @@ function buildCassette(opts) {
 // ===================== TRACK HEIGHT CALCULATOR =====================
 function calcTrackAreaHeight(tracks) {
   let h = 0;
-  tracks.forEach(t => {
-    h += t.lyrics ? 62 : 46;
-    h += 1;
-  });
+  tracks.forEach(t => { h += t.lyrics ? 62 : 46; h += 1; });
   h += 16;
   return Math.max(80, h);
 }
@@ -299,12 +285,11 @@ function renderPreview() {
     : `<i class="fa-solid fa-music" style="font-size:2rem;color:rgba(255,255,255,0.5);"></i>`;
 
   const outerBg = hasHeaderImg
-    ? `<div style="position:absolute;inset:0;background-image:url('${state.headerImg}');background-size:cover;background-position:center;filter:blur(14px) brightness(0.75);transform:scale(1.15);z-index:0;"></div><div style="position:absolute;inset:0;background:${bgColor};opacity:0.2;z-index:0;"></div>`
+    ? `<div class="pl-bg-blur" style="position:absolute;inset:-20px;background-image:url('${state.headerImg}');background-size:cover;background-position:center;filter:blur(14px) brightness(0.75);transform:scale(1.15);z-index:0;"></div>`
     : '';
 
   const cassetteOpts = { hasHeaderImg, bgColor, albumFallback, albumHTML, mainTitle, mainLyrics, progressPct, timeStart, timeEnd, playerBg, playerText };
 
-  // ===== 카세트만 =====
   if (!showSetlist) {
     document.getElementById('playlistPreview').innerHTML = `
       <div class="pl-cassette" style="font-family:${fontStack};position:relative;overflow:hidden;padding:2rem;${hasHeaderImg ? '' : `background:${bgColor};`}">
@@ -319,7 +304,6 @@ function renderPreview() {
     return;
   }
 
-  // ===== 셋리스트 =====
   let tracksContent = '';
   if (state.tracks.length === 0) {
     tracksContent = `<div style="font-size:0.9rem;color:${lyricsColor};text-align:center;padding:2rem 0;">곡을 추가하면 여기에 표시됩니다</div>`;
@@ -408,7 +392,7 @@ ${preview.innerHTML}
 
 function saveJSON() {
   const data = {
-    version: 14,
+    version: 15,
     headerImg: state.headerImg,
     albumImg: state.albumImg,
     mainTitle: getVal('mainTitle'),
@@ -449,10 +433,7 @@ function loadJSON(event) {
       state.headerImg = data.headerImg || '';
       state.albumImg = data.albumImg || '';
       state.tracks = (data.tracks || []).slice(0, 10).map(t => ({
-        id: t.id,
-        title: t.title || '',
-        lyrics: t.lyrics || '',
-        albumImg: t.albumImg || '',
+        id: t.id, title: t.title || '', lyrics: t.lyrics || '', albumImg: t.albumImg || '',
       }));
       state.nextTrackId = data.nextTrackId || (state.tracks.length + 1);
 
@@ -490,20 +471,92 @@ function loadJSON(event) {
   event.target.value = '';
 }
 
+// ===================== SAVE IMAGE (블러 배경 포함) =====================
 function saveImage() {
   const target = document.querySelector('.pl-cassette');
-  if (!target) {
-    alert('미리보기를 먼저 생성해 주세요.');
-    return;
+  if (!target) { alert('미리보기를 먼저 생성해 주세요.'); return; }
+
+  if (state.headerImg) {
+    saveImageWithBlur(target);
+  } else {
+    html2canvas(target, { scale: 2, backgroundColor: null, useCORS: true })
+      .then(canvas => downloadCanvas(canvas))
+      .catch(() => alert('이미지 저장 중 오류가 발생했습니다.'));
   }
-  html2canvas(target, {
-    scale: 2,
-    backgroundColor: null,
-    useCORS: true,
-  }).then(canvas => {
-    const a = document.createElement('a');
-    a.href = canvas.toDataURL('image/png');
-    a.download = 'playlist-preview.png';
-    a.click();
-  }).catch(() => alert('이미지 저장 중 오류가 발생했습니다.'));
+}
+
+function saveImageWithBlur(target) {
+  const rect = target.getBoundingClientRect();
+  const scale = 2;
+  const w = rect.width * scale;
+  const h = rect.height * scale;
+
+  const bgImg = new Image();
+  bgImg.crossOrigin = 'anonymous';
+  bgImg.onload = () => {
+    // 1) 블러 배경 캔버스
+    const bgCanvas = document.createElement('canvas');
+    bgCanvas.width = w;
+    bgCanvas.height = h;
+    const bgCtx = bgCanvas.getContext('2d');
+
+    const imgRatio = bgImg.width / bgImg.height;
+    const canvasRatio = w / h;
+    let sx, sy, sw, sh;
+    if (imgRatio > canvasRatio) {
+      sh = bgImg.height; sw = sh * canvasRatio;
+      sx = (bgImg.width - sw) / 2; sy = 0;
+    } else {
+      sw = bgImg.width; sh = sw / canvasRatio;
+      sx = 0; sy = (bgImg.height - sh) / 2;
+    }
+
+    bgCtx.filter = `blur(${14 * scale}px) brightness(0.75)`;
+    const expand = 14 * scale * 2;
+    bgCtx.drawImage(bgImg, sx, sy, sw, sh, -expand, -expand, w + expand * 2, h + expand * 2);
+    bgCtx.filter = 'none';
+
+    // 2) 블러 레이어 숨기고 콘텐츠만 캡처
+    const blurLayers = target.querySelectorAll('.pl-bg-blur');
+    blurLayers.forEach(el => el.style.display = 'none');
+    const origBg = target.style.background;
+    target.style.background = 'transparent';
+
+    html2canvas(target, { useCORS: true, allowTaint: true, scale, backgroundColor: null })
+      .then(contentCanvas => {
+        blurLayers.forEach(el => el.style.display = '');
+        target.style.background = origBg;
+
+        // 3) 합성
+        const finalCanvas = document.createElement('canvas');
+        finalCanvas.width = w;
+        finalCanvas.height = h;
+        const fCtx = finalCanvas.getContext('2d');
+        fCtx.drawImage(bgCanvas, 0, 0);
+        fCtx.drawImage(contentCanvas, 0, 0);
+
+        downloadCanvas(finalCanvas);
+      })
+      .catch(err => {
+        blurLayers.forEach(el => el.style.display = '');
+        target.style.background = origBg;
+        console.error(err);
+        alert('이미지 저장에 실패했습니다.');
+      });
+  };
+
+  bgImg.onerror = () => {
+    html2canvas(target, { scale: 2, backgroundColor: null, useCORS: true })
+      .then(canvas => downloadCanvas(canvas))
+      .catch(() => alert('이미지 저장 중 오류가 발생했습니다.'));
+  };
+
+  bgImg.src = state.headerImg;
+}
+
+function downloadCanvas(canvas) {
+  const a = document.createElement('a');
+  a.href = canvas.toDataURL('image/png');
+  a.download = 'playlist-preview.png';
+  a.click();
 }
