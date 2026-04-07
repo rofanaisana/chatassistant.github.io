@@ -1,14 +1,18 @@
 /* ================================================================
-   checklist.js — Chat Backup 체크리스트 페이지 로직 (v2)
+   checklist.js — Chat Backup 체크리스트 페이지 로직 (v3)
    ================================================================ */
 
 // ─── State ─────────────────────────────────────────────
 let state = {
   mainTitle: '',
+  titleShadow: false,
   bgColor: '#f8f9fb',
   bgImage: '',
   bgBlur: 0,
+  boxColor: '#ffffff',
+  boxOpacity: 60,
   imgShape: 'circle',
+  imgShadow: false,
   tiltA: -3,
   tiltB: 3,
   charA: { name: '캐릭터 A', image: '' },
@@ -25,21 +29,13 @@ let state = {
     cat:    { family: 'Pretendard', size: 16, color: '#444444' },
   },
   items: []
-  // question: { type, id, question, checkA, checkB, commentA, commentB }
-  // separator: { type, id, sepStyle, sepImage }
-  // category: { type, id, title }
 };
 
 let itemIdCounter = 0;
 let sortableInstance = null;
 
-// ─── Check symbols ─────────────────────────────────────
 const CHECK_SYMBOLS = {
-  check: '✓',
-  circle: '●',
-  star: '★',
-  heart: '♥',
-  cross: '✕'
+  check: '✓', circle: '●', star: '★', heart: '♥', cross: '✕'
 };
 
 const SEP_STYLES = [
@@ -57,12 +53,11 @@ document.addEventListener('DOMContentLoaded', () => {
   initSortable();
 });
 
-// ─── Accordion ─────────────────────────────────────────
+// ─── Accordion / Mobile tabs ───────────────────────────
 function toggleAccordion(id) {
   document.getElementById(id).classList.toggle('collapsed');
 }
 
-// ─── Mobile tabs ───────────────────────────────────────
 function switchTab(tab) {
   const editor = document.getElementById('editorPanel');
   const preview = document.getElementById('previewPanel');
@@ -77,7 +72,7 @@ function switchTab(tab) {
   }
 }
 
-// ─── Background ────────────────────────────────────────
+// ─── Background ─────────────────��──────────────────────
 function onBgImageUpload(e) {
   const file = e.target.files[0];
   if (!file) return;
@@ -105,6 +100,12 @@ function onBlurChange() {
   renderPreview();
 }
 
+function onBoxOpacityChange() {
+  state.boxOpacity = parseInt(document.getElementById('boxOpacity').value);
+  document.getElementById('boxOpacityVal').textContent = state.boxOpacity + '%';
+  renderPreview();
+}
+
 // ─── Character images ──────────────────────────────────
 function onCharImageUpload(e, who) {
   const file = e.target.files[0];
@@ -126,7 +127,7 @@ function clearCharImage(who) {
   renderPreview();
 }
 
-// ─── Shape change ──────────────────────────────────────
+// ─── Shape / Tilt ──────────────────────────────────────
 function onShapeChange() {
   state.imgShape = document.getElementById('imgShape').value;
   document.getElementById('polaroidTiltSection').style.display =
@@ -177,17 +178,14 @@ function readFonts() {
 }
 function g(id) { return document.getElementById(id).value; }
 
-// ─── Separator image upload per item ───────────────────
+// ─── Separator image upload ────────────────────────────
 function onSepImageUpload(e, itemId) {
   const file = e.target.files[0];
   if (!file) return;
   const reader = new FileReader();
   reader.onload = ev => {
     const item = state.items.find(it => it.id === itemId);
-    if (item) {
-      item.sepImage = ev.target.result;
-      renderPreview();
-    }
+    if (item) { item.sepImage = ev.target.result; renderPreview(); }
   };
   reader.readAsDataURL(file);
 }
@@ -198,7 +196,7 @@ function addItem(type) {
   if (type === 'question') {
     state.items.push({ type, id, question: '', checkA: false, checkB: false, commentA: '', commentB: '' });
   } else if (type === 'separator') {
-    state.items.push({ type, id, sepStyle: 'solid', sepImage: '' });
+    state.items.push({ type, id, sepStyle: 'solid', sepColor: '#cccccc', sepImage: '' });
   } else if (type === 'category') {
     state.items.push({ type, id, title: '' });
   }
@@ -223,10 +221,7 @@ function updateItem(id, key, value) {
   const item = state.items.find(it => it.id === id);
   if (item) {
     item[key] = value;
-    if (key === 'sepStyle') {
-      // Show/hide custom image upload in editor
-      renderEditor();
-    }
+    if (key === 'sepStyle') renderEditor();
     renderPreview();
   }
 }
@@ -281,6 +276,7 @@ function renderEditor() {
           </div>
         </div>`;
     } else if (item.type === 'separator') {
+      const sepColor = item.sepColor || '#cccccc';
       const sepStyleOptions = SEP_STYLES.map(s =>
         `<option value="${s.value}" ${item.sepStyle === s.value ? 'selected' : ''}>${s.label}</option>`
       ).join('');
@@ -289,7 +285,7 @@ function renderEditor() {
       if (item.sepStyle === 'custom') {
         customUploadHTML = `
           <div style="margin-top:0.4rem;">
-            <div class="text-muted" style="margin-bottom:0.3rem;">이미지 업로드 (권장 크기: 전체 너비 × 20px)</div>
+            <div class="text-muted" style="margin-bottom:0.3rem;">이미지 업로드 (권장: 전체 너비 × 20px)</div>
             <div style="display:flex;align-items:center;gap:0.4rem;">
               <button class="btn btn-secondary btn-sm" onclick="document.getElementById('sepImg_${item.id}').click()">
                 <i class="fa-solid fa-upload"></i> 업로드
@@ -314,6 +310,8 @@ function renderEditor() {
               <select class="form-select" onchange="updateItem(${item.id},'sepStyle',this.value)">
                 ${sepStyleOptions}
               </select>
+              <input type="color" value="${sepColor}" style="width:36px;height:32px;flex-shrink:0;"
+                oninput="updateItem(${item.id},'sepColor',this.value)" />
             </div>
             ${customUploadHTML}
           </div>
@@ -372,11 +370,22 @@ function initSortable() {
   });
 }
 
+// ─── hex → rgba helper ─────────────────────────────────
+function hexToRgba(hex, opacity) {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  return `rgba(${r},${g},${b},${opacity / 100})`;
+}
+
 // ─── Preview render ────────────────────────────────────
 function renderPreview() {
-  // Sync state from editor
   state.mainTitle = document.getElementById('mainTitle').value;
+  state.titleShadow = document.getElementById('titleShadow').checked;
   state.bgColor = document.getElementById('bgColor').value;
+  state.boxColor = document.getElementById('boxColor').value;
+  state.boxOpacity = parseInt(document.getElementById('boxOpacity').value);
+  state.imgShadow = document.getElementById('imgShadow').checked;
   state.checkA.color = document.getElementById('checkColorA').value;
   state.checkB.color = document.getElementById('checkColorB').value;
   state.charA.name = document.getElementById('charAName').value || '캐릭터 A';
@@ -386,6 +395,7 @@ function renderPreview() {
   renderTitle();
   renderBackground();
   renderCharacters();
+  renderItemsBox();
   renderItems();
 }
 
@@ -397,6 +407,7 @@ function renderTitle() {
     el.style.fontFamily = `'${f.family}', sans-serif`;
     el.style.fontSize = f.size + 'px';
     el.style.color = f.color;
+    el.className = 'cl-title' + (state.titleShadow ? ' has-shadow' : '');
     el.textContent = state.mainTitle;
   } else {
     el.style.display = 'none';
@@ -422,10 +433,17 @@ function renderBackground() {
   }
 }
 
+function renderItemsBox() {
+  const box = document.getElementById('clItemsBox');
+  box.style.backgroundColor = hexToRgba(state.boxColor, state.boxOpacity);
+  box.style.borderRadius = '14px';
+}
+
 function renderCharacters() {
   const wrap = document.getElementById('clCharacters');
   const shape = state.imgShape;
   const f = state.fonts;
+  const shadow = state.imgShadow;
 
   function charBlock(who, charData, fontCfg, tilt) {
     const hasImg = !!charData.image;
@@ -434,11 +452,12 @@ function renderCharacters() {
       : `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:#aaa;font-size:2rem;"><i class="fa-solid fa-user"></i></div>`;
 
     const nameStyle = `font-family:'${fontCfg.family}',sans-serif;font-size:${fontCfg.size}px;color:${fontCfg.color};`;
+    const shadowCls = shadow ? ' has-shadow' : '';
 
     if (shape === 'polaroid') {
       return `
         <div class="cl-char-block">
-          <div class="cl-polaroid-frame" style="transform:rotate(${tilt}deg);">
+          <div class="cl-polaroid-frame${shadowCls}" style="transform:rotate(${tilt}deg);">
             <div class="cl-char-img-wrap shape-square">${imgTag}</div>
             <div class="cl-polaroid-name" style="${nameStyle}">${escHTML(charData.name)}</div>
           </div>
@@ -447,7 +466,7 @@ function renderCharacters() {
 
     return `
       <div class="cl-char-block">
-        <div class="cl-char-img-wrap shape-${shape}">${imgTag}</div>
+        <div class="cl-char-img-wrap shape-${shape}${shadowCls}">${imgTag}</div>
         <div class="cl-char-name" style="${nameStyle}">${escHTML(charData.name)}</div>
       </div>`;
   }
@@ -460,19 +479,23 @@ function renderCharacters() {
 function getCheckContent(checked, who) {
   const cfg = state[`check${who}`];
   if (!checked) {
-    // Unchecked: show symbol faded
     if (cfg.shape === 'custom' && cfg.customImage) {
       return `<img src="${cfg.customImage}" alt="" style="opacity:0.15;" />`;
     }
     const sym = CHECK_SYMBOLS[cfg.shape] || '✓';
     return `<span style="color:${cfg.color};opacity:0.15;">${sym}</span>`;
   }
-  // Checked
   if (cfg.shape === 'custom' && cfg.customImage) {
     return `<img src="${cfg.customImage}" alt="check" />`;
   }
   const sym = CHECK_SYMBOLS[cfg.shape] || '✓';
   return `<span style="color:${cfg.color};">${sym}</span>`;
+}
+
+// ─── SVG wave with dynamic color ───────────────────────
+function waveSvgBg(color) {
+  const encoded = encodeURIComponent(color);
+  return `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='12' viewBox='0 0 100 12'%3E%3Cpath d='M0 6 Q12.5 0 25 6 T50 6 T75 6 T100 6' fill='none' stroke='${encoded}' stroke-width='1.5'/%3E%3C/svg%3E")`;
 }
 
 function renderItems() {
@@ -488,10 +511,19 @@ function renderItems() {
   state.items.forEach(item => {
     if (item.type === 'separator') {
       const style = item.sepStyle || 'solid';
+      const color = item.sepColor || '#cccccc';
       if (style === 'custom' && item.sepImage) {
         html += `<img class="cl-separator-img" src="${item.sepImage}" alt="separator" />`;
+      } else if (style === 'wave') {
+        html += `<div class="cl-separator sep-wave" style="background:${waveSvgBg(color)} repeat-x center;"></div>`;
       } else {
-        html += `<hr class="cl-separator sep-${style}" />`;
+        const borderStyles = {
+          solid: `1.5px solid ${color}`,
+          dashed: `1.5px dashed ${color}`,
+          dotted: `2px dotted ${color}`,
+          double: `4px double ${color}`
+        };
+        html += `<hr class="cl-separator" style="border-top:${borderStyles[style] || borderStyles.solid};" />`;
       }
     } else if (item.type === 'category') {
       const fc = f.cat;
@@ -505,16 +537,12 @@ function renderItems() {
       const hasB = item.commentB && item.commentB.trim();
       if (hasA || hasB) {
         commentsHTML = `<div class="cl-comments">`;
-        if (hasA) {
-          commentsHTML += `<div class="cl-comment cl-comment-a" style="font-family:'${f.aCmt.family}',sans-serif;font-size:${f.aCmt.size}px;color:${f.aCmt.color};">${escHTML(item.commentA)}</div>`;
-        } else {
-          commentsHTML += `<div></div>`;
-        }
-        if (hasB) {
-          commentsHTML += `<div class="cl-comment cl-comment-b" style="font-family:'${f.bCmt.family}',sans-serif;font-size:${f.bCmt.size}px;color:${f.bCmt.color};">${escHTML(item.commentB)}</div>`;
-        } else {
-          commentsHTML += `<div></div>`;
-        }
+        commentsHTML += hasA
+          ? `<div class="cl-comment cl-comment-a" style="font-family:'${f.aCmt.family}',sans-serif;font-size:${f.aCmt.size}px;color:${f.aCmt.color};">${escHTML(item.commentA)}</div>`
+          : `<div></div>`;
+        commentsHTML += hasB
+          ? `<div class="cl-comment cl-comment-b" style="font-family:'${f.bCmt.family}',sans-serif;font-size:${f.bCmt.size}px;color:${f.bCmt.color};">${escHTML(item.commentB)}</div>`
+          : `<div></div>`;
         commentsHTML += `</div>`;
       }
 
@@ -551,7 +579,7 @@ function copyHTML() {
 
 // ─── Export: Save JSON ─────────────────────────────────
 function saveJSON() {
-  renderPreview(); // Ensure state is synced
+  renderPreview();
   const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -569,11 +597,11 @@ function loadJSON(e) {
   reader.onload = ev => {
     try {
       const data = JSON.parse(ev.target.result);
-      // Merge with defaults for backward compat
-      state = Object.assign({
-        mainTitle: '',
+      const defaults = {
+        mainTitle: '', titleShadow: false,
         bgColor: '#f8f9fb', bgImage: '', bgBlur: 0,
-        imgShape: 'circle', tiltA: -3, tiltB: 3,
+        boxColor: '#ffffff', boxOpacity: 60,
+        imgShape: 'circle', imgShadow: false, tiltA: -3, tiltB: 3,
         charA: { name: '캐릭터 A', image: '' },
         charB: { name: '캐릭터 B', image: '' },
         checkA: { shape: 'check', color: '#4A90D9', customImage: '' },
@@ -588,9 +616,10 @@ function loadJSON(e) {
           cat:   { family: 'Pretendard', size: 16, color: '#444444' },
         },
         items: []
-      }, data);
+      };
+      state = Object.assign(defaults, data);
 
-      // Handle old format migration (single checkShape/checkColor → A/B)
+      // Old format migration
       if (data.checkShape && !data.checkA) {
         state.checkA = { shape: data.checkShape, color: data.checkColor || '#4A90D9', customImage: data.customCheckImage || '' };
         state.checkB = { shape: data.checkShape, color: data.checkColor || '#e9658b', customImage: data.customCheckImage || '' };
@@ -610,10 +639,15 @@ function loadJSON(e) {
 
 function restoreEditorFromState() {
   document.getElementById('mainTitle').value = state.mainTitle || '';
+  document.getElementById('titleShadow').checked = !!state.titleShadow;
   document.getElementById('bgColor').value = state.bgColor || '#f8f9fb';
   document.getElementById('bgBlur').value = state.bgBlur || 0;
   document.getElementById('bgBlurVal').textContent = (state.bgBlur || 0) + 'px';
+  document.getElementById('boxColor').value = state.boxColor || '#ffffff';
+  document.getElementById('boxOpacity').value = state.boxOpacity ?? 60;
+  document.getElementById('boxOpacityVal').textContent = (state.boxOpacity ?? 60) + '%';
   document.getElementById('imgShape').value = state.imgShape || 'circle';
+  document.getElementById('imgShadow').checked = !!state.imgShadow;
   document.getElementById('polaroidTiltSection').style.display = state.imgShape === 'polaroid' ? '' : 'none';
   document.getElementById('tiltA').value = state.tiltA ?? -3;
   document.getElementById('tiltB').value = state.tiltB ?? 3;
@@ -622,27 +656,22 @@ function restoreEditorFromState() {
   document.getElementById('charAName').value = state.charA.name || '';
   document.getElementById('charBName').value = state.charB.name || '';
 
-  // Check A
   document.getElementById('checkShapeA').value = state.checkA.shape || 'check';
   document.getElementById('checkColorA').value = state.checkA.color || '#4A90D9';
   document.getElementById('customCheckGroupA').style.display = state.checkA.shape === 'custom' ? '' : 'none';
   if (state.checkA.customImage) {
     const imgA = document.getElementById('customCheckPreviewA');
-    imgA.src = state.checkA.customImage;
-    imgA.style.display = '';
+    imgA.src = state.checkA.customImage; imgA.style.display = '';
   }
 
-  // Check B
   document.getElementById('checkShapeB').value = state.checkB.shape || 'heart';
   document.getElementById('checkColorB').value = state.checkB.color || '#e9658b';
   document.getElementById('customCheckGroupB').style.display = state.checkB.shape === 'custom' ? '' : 'none';
   if (state.checkB.customImage) {
     const imgB = document.getElementById('customCheckPreviewB');
-    imgB.src = state.checkB.customImage;
-    imgB.style.display = '';
+    imgB.src = state.checkB.customImage; imgB.style.display = '';
   }
 
-  // BG image
   if (state.bgImage) {
     document.getElementById('bgImgClearBtn').style.display = '';
     document.getElementById('blurGroup').style.display = '';
@@ -650,12 +679,9 @@ function restoreEditorFromState() {
     document.getElementById('bgImgClearBtn').style.display = 'none';
     document.getElementById('blurGroup').style.display = 'none';
   }
-  if (state.charA.image) document.getElementById('charAImgClear').style.display = '';
-  else document.getElementById('charAImgClear').style.display = 'none';
-  if (state.charB.image) document.getElementById('charBImgClear').style.display = '';
-  else document.getElementById('charBImgClear').style.display = 'none';
+  document.getElementById('charAImgClear').style.display = state.charA.image ? '' : 'none';
+  document.getElementById('charBImgClear').style.display = state.charB.image ? '' : 'none';
 
-  // Fonts
   const f = state.fonts;
   document.getElementById('fontTitle').value = f.title.family;
   document.getElementById('sizeTitle').value = f.title.size;
@@ -680,21 +706,138 @@ function restoreEditorFromState() {
   document.getElementById('colorCat').value = f.cat.color;
 }
 
-// ─── Export: Save Image ────────────────────────────────
+// ─── Export: Save Image (블러 배경 포함) ───────────────
 function saveImage() {
   const target = document.getElementById('checklistPreview');
-  html2canvas(target, {
-    useCORS: true,
-    allowTaint: true,
-    scale: 2,
-    backgroundColor: null
-  }).then(canvas => {
-    const a = document.createElement('a');
-    a.download = 'checklist.png';
-    a.href = canvas.toDataURL('image/png');
-    a.click();
-  }).catch(err => {
-    console.error(err);
-    alert('이미지 저장에 실패했습니다.');
-  });
+  const bgLayer = document.getElementById('bgLayer');
+
+  // 블러 배경이 있을 경우, 저장 직전에 bgLayer의 inset을 0으로 만들고
+  // 대신 더 큰 scale로 캡처한 뒤 clip하는 방식을 사용.
+  // html2canvas는 CSS filter: blur()를 제대로 캡처 못 하는 경우가 많으므로
+  // 수동으로 배경을 그린다.
+
+  if (state.bgImage && state.bgBlur > 0) {
+    saveImageWithBlur(target);
+  } else {
+    html2canvas(target, {
+      useCORS: true,
+      allowTaint: true,
+      scale: 2,
+      backgroundColor: null
+    }).then(canvas => {
+      downloadCanvas(canvas);
+    }).catch(err => {
+      console.error(err);
+      alert('이미지 저장에 실패했습니다.');
+    });
+  }
+}
+
+function saveImageWithBlur(target) {
+  const rect = target.getBoundingClientRect();
+  const scale = 2;
+  const w = rect.width * scale;
+  const h = rect.height * scale;
+
+  // 1) 배경 이미지를 블러 처리하여 캔버스에 그리기
+  const bgImg = new Image();
+  bgImg.crossOrigin = 'anonymous';
+  bgImg.onload = () => {
+    const bgCanvas = document.createElement('canvas');
+    bgCanvas.width = w;
+    bgCanvas.height = h;
+    const bgCtx = bgCanvas.getContext('2d');
+
+    // 배경 이미지를 cover 방식으로 그리기
+    const imgRatio = bgImg.width / bgImg.height;
+    const canvasRatio = w / h;
+    let sx, sy, sw, sh;
+    if (imgRatio > canvasRatio) {
+      sh = bgImg.height;
+      sw = sh * canvasRatio;
+      sx = (bgImg.width - sw) / 2;
+      sy = 0;
+    } else {
+      sw = bgImg.width;
+      sh = sw / canvasRatio;
+      sx = 0;
+      sy = (bgImg.height - sh) / 2;
+    }
+
+    bgCtx.filter = `blur(${state.bgBlur * scale}px)`;
+    // 확장해서 그려서 가장자리 하얀 부분 방지
+    const expand = state.bgBlur * scale * 2;
+    bgCtx.drawImage(bgImg, sx, sy, sw, sh, -expand, -expand, w + expand * 2, h + expand * 2);
+    bgCtx.filter = 'none';
+
+    // 2) 배경 레이어 숨기고 콘텐츠만 html2canvas로 캡처
+    const bgLayer = document.getElementById('bgLayer');
+    const origDisplay = bgLayer.style.display;
+    bgLayer.style.display = 'none';
+
+    // 배경색도 투명으로
+    const origBgColor = target.style.backgroundColor;
+    target.style.backgroundColor = 'transparent';
+
+    html2canvas(target, {
+      useCORS: true,
+      allowTaint: true,
+      scale: scale,
+      backgroundColor: null
+    }).then(contentCanvas => {
+      // 복원
+      bgLayer.style.display = origDisplay;
+      target.style.backgroundColor = origBgColor;
+
+      // 3) 합성
+      const finalCanvas = document.createElement('canvas');
+      finalCanvas.width = w;
+      finalCanvas.height = h;
+      const fCtx = finalCanvas.getContext('2d');
+
+      // 둥근 모서리 클립
+      const radius = 16 * scale;
+      fCtx.beginPath();
+      fCtx.moveTo(radius, 0);
+      fCtx.lineTo(w - radius, 0);
+      fCtx.quadraticCurveTo(w, 0, w, radius);
+      fCtx.lineTo(w, h - radius);
+      fCtx.quadraticCurveTo(w, h, w - radius, h);
+      fCtx.lineTo(radius, h);
+      fCtx.quadraticCurveTo(0, h, 0, h - radius);
+      fCtx.lineTo(0, radius);
+      fCtx.quadraticCurveTo(0, 0, radius, 0);
+      fCtx.closePath();
+      fCtx.clip();
+
+      // 배경 그리기
+      fCtx.drawImage(bgCanvas, 0, 0);
+      // 콘텐츠 그리기
+      fCtx.drawImage(contentCanvas, 0, 0);
+
+      downloadCanvas(finalCanvas);
+    }).catch(err => {
+      bgLayer.style.display = origDisplay;
+      target.style.backgroundColor = origBgColor;
+      console.error(err);
+      alert('이미지 저장에 실패했습니다.');
+    });
+  };
+
+  bgImg.onerror = () => {
+    // 폴백: 일반 html2canvas
+    html2canvas(target, {
+      useCORS: true, allowTaint: true, scale: 2, backgroundColor: null
+    }).then(canvas => downloadCanvas(canvas))
+    .catch(() => alert('이미지 저장에 실패했습니다.'));
+  };
+
+  bgImg.src = state.bgImage;
+}
+
+function downloadCanvas(canvas) {
+  const a = document.createElement('a');
+  a.download = 'checklist.png';
+  a.href = canvas.toDataURL('image/png');
+  a.click();
 }
