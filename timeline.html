@@ -28,35 +28,27 @@
     <div class="split-layout">
       <div class="editor-panel" id="editorPanel">
 
-        <div class="section-block">
-          <div class="section-title"><i class="fa-solid fa-sliders"></i> 기본 설정</div>
-          <div class="form-group">
-            <label class="form-label">제목 (선택)</label>
-            <input type="text" id="timelineTitle" class="form-input" placeholder="연표 제목을 입력하세요 (생략 가능)" oninput="renderPreview()" />
-          </div>
-          <div class="form-group">
-            <label class="form-label">연표 정렬</label>
-            <select id="alignSelect" class="form-select" onchange="renderPreview()">
-              <option value="left">좌측 정렬</option>
-              <option value="right">우측 정렬</option>
-              <option value="center">중앙 정렬</option>
-            </select>
-          </div>
+        <div class="form-group" style="padding:0.85rem 1.4rem 0;">
+          <label class="form-label">타임라인 제목</label>
+          <input type="text" id="timelineTitle" class="form-input" placeholder="타임라인 제목 (선택)" oninput="renderPreview()" />
         </div>
 
-        <div class="accordion-section" id="accordionTheme">
-          <div class="accordion-header" onclick="toggleAccordion('accordionTheme')">
-            <span class="accordion-title"><i class="fa-solid fa-palette"></i> 테마 &amp; 글꼴</span>
+        <div class="accordion-section" id="accordionStyle">
+          <div class="accordion-header" onclick="toggleAccordion('accordionStyle')">
+            <span class="accordion-title"><i class="fa-solid fa-palette"></i> 스타일 설정</span>
             <i class="fa-solid fa-chevron-down accordion-toggle-icon"></i>
           </div>
           <div class="accordion-body">
             <div class="form-group">
               <label class="form-label">글꼴 선택</label>
-              <select id="fontSelect" class="form-select" onchange="renderPreview()">
-                <option value="Pretendard">Pretendard (기본)</option>
-                <option value="RIDIBatang">리디바탕</option>
-                <option value="Nanum Gothic">나눔고딕</option>
-                <option value="Nanum Myeongjo">나눔명조</option>
+              <select id="fontSelect" class="form-select" onchange="renderPreview()"></select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">정렬</label>
+              <select id="alignSelect" class="form-select" onchange="renderPreview()">
+                <option value="left">← 좌측 정렬</option>
+                <option value="right">→ 우측 정렬</option>
+                <option value="center">↔ 중앙 교차</option>
               </select>
             </div>
             <div class="node-row">
@@ -65,7 +57,7 @@
                 <input type="color" id="bgColor" value="#fdf8f0" oninput="renderPreview()" />
               </div>
               <div class="form-group">
-                <label class="form-label">노드 연결선 색</label>
+                <label class="form-label">연결선 색</label>
                 <input type="color" id="lineColor" value="#c8a97e" oninput="renderPreview()" />
               </div>
             </div>
@@ -84,19 +76,17 @@
 
         <div class="accordion-section" id="accordionProfiles">
           <div class="accordion-header" onclick="toggleAccordion('accordionProfiles')">
-            <span class="accordion-title"><i class="fa-solid fa-address-card"></i> 인물 프로필 카드</span>
+            <span class="accordion-title"><i class="fa-solid fa-users"></i> 인물 설정</span>
             <i class="fa-solid fa-chevron-down accordion-toggle-icon"></i>
           </div>
           <div class="accordion-body">
             <div id="profileList"></div>
             <button class="btn btn-primary btn-sm" id="addProfileBtn" onclick="addProfile()">
-              <i class="fa-solid fa-plus"></i> 인물 추가
+              <i class="fa-solid fa-user-plus"></i> 인물 추가
             </button>
             <div class="text-muted" style="margin-top:6px;">최대 3인</div>
-
-            <!-- 인물 관계 입력 영역 -->
-            <div style="margin-top:1rem;border-top:1px solid #f0f2f5;padding-top:0.8rem;" id="relationsSection">
-              <div class="section-title" style="margin-bottom:0.6rem;"><i class="fa-solid fa-arrows-left-right"></i> 인물 관계</div>
+            <div style="margin-top:1rem;border-top:1px solid #f0f2f5;padding-top:0.8rem;">
+              <div class="form-label" style="margin-bottom:0.5rem;">인물 관계</div>
               <div id="relationsList">
                 <div class="text-muted">인물 2인 이상 추가시 관계를 설정할 수 있습니다.</div>
               </div>
@@ -115,7 +105,7 @@
                 <i class="fa-solid fa-plus"></i> 노드 추가
               </button>
               <button class="btn btn-danger btn-sm" onclick="clearAllNodes()">
-                <i class="fa-solid fa-trash"></i> 내용 전체삭제
+                <i class="fa-solid fa-trash"></i> 전체삭제
               </button>
             </div>
             <div id="nodeList">
@@ -130,18 +120,10 @@
         <div class="export-section">
           <div class="section-title"><i class="fa-solid fa-share-nodes"></i> 내보내기</div>
           <div class="btn-group">
-            <button class="btn btn-secondary btn-sm" onclick="copyHTML()">
-              <i class="fa-solid fa-code"></i> HTML 복사
-            </button>
-            <button class="btn btn-secondary btn-sm" onclick="saveJSON()">
-              <i class="fa-solid fa-download"></i> JSON 저장
-            </button>
-            <button class="btn btn-secondary btn-sm" onclick="document.getElementById('loadFile').click()">
-              <i class="fa-solid fa-upload"></i> 불러오기
-            </button>
-            <button class="btn btn-primary btn-sm" onclick="saveImage()">
-              <i class="fa-solid fa-image"></i> 이미지 저장
-            </button>
+            <button class="btn btn-secondary btn-sm" onclick="copyHTML()"><i class="fa-solid fa-code"></i> HTML 복사</button>
+            <button class="btn btn-secondary btn-sm" onclick="saveJSON()"><i class="fa-solid fa-download"></i> JSON 저장</button>
+            <button class="btn btn-secondary btn-sm" onclick="document.getElementById('loadFile').click()"><i class="fa-solid fa-upload"></i> 불러오기</button>
+            <button class="btn btn-primary btn-sm" onclick="saveImage()"><i class="fa-solid fa-image"></i> 이미지 저장</button>
           </div>
           <input type="file" id="loadFile" accept=".json" style="display:none" onchange="loadJSON(event)" />
         </div>
@@ -149,7 +131,7 @@
 
       <div class="preview-panel" id="previewPanel">
         <div class="preview-inner">
-          <div id="timelinePreview" class="timeline-wrapper">
+          <div class="timeline-wrapper" id="timelinePreview">
             <div id="profilesRow" class="profiles-row"></div>
             <div id="timelineList" class="timeline-list">
               <div class="empty-state">
@@ -165,6 +147,7 @@
 
   <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+  <script src="js/fonts.js"></script>
   <script src="js/timeline.js"></script>
 </body>
 </html>
