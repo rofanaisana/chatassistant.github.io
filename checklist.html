@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>체크리스트 — Chat Backup</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+  <link rel="stylesheet" href="css/style.css" />
+  <style>
+    /* ===================== CHECKLIST PREVIEW ===================== */
+    .cl-preview-area {
+      position: relative;
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 8px 40px rgba(0,0,0,0.12);
+      min-height: 400px;
+    }
+
+    .cl-bg-layer {
+      position: absolute;
+      inset: 0;
+      background-size: cover;
+      background-position: center;
+      z-index: 0;
+    }
+
+    .cl-content {
+      position: relative;
+      z-index: 1;
+      padding: 2rem 1.5rem;
+    }
+
+    /* ===== Characters Top ===== */
+    .cl-characters {
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      gap: 2.5rem;
+      margin-bottom: 2rem;
+    }
+
+    .cl-char-block {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .cl-char-img-wrap {
+      width: 120px;
+      height: 120px;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #e8eaf0;
+    }
+
+    .cl-char-img-wrap img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .cl-char-img-wrap.shape-circle { border-radius: 50%; }
+    .cl-char-img-wrap.shape-rounded { border-radius: 16px; }
+    .cl-char-img-wrap.shape-square { border-radius: 0; }
+    .cl-char-img-wrap.shape-diamond {
+      clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
+      border-radius: 0;
+    }
+
+    /* Polaroid */
+    .cl-polaroid-frame {
+      background: #fff;
+      padding: 8px 8px 30px 8px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+      display: inline-block;
+      transition: transform 0.2s;
+    }
+
+    .cl-polaroid-frame .cl-char-img-wrap {
+      width: 110px;
+      height: 110px;
+      border-radius: 0 !important;
+    }
+
+    .cl-char-name {
+      font-weight: 600;
+      text-align: center;
+      word-break: break-word;
+    }
+
+    /* ===== Checklist Items ===== */
+    .cl-items-area {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+    }
+
+    .cl-question-row {
+      background: rgba(255,255,255,0.85);
+      border-radius: 12px;
+      padding: 0.8rem 1rem;
+      margin-bottom: 0.6rem;
+      backdrop-filter: blur(2px);
+    }
+
+    .cl-q-main {
+      display: grid;
+      grid-template-columns: 40px 1fr 40px;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .cl-check-cell {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 36px;
+      height: 36px;
+      cursor: pointer;
+      user-select: none;
+      border-radius: 8px;
+      transition: background 0.15s;
+      font-size: 1.2rem;
+    }
+
+    .cl-check-cell:hover {
+      background: rgba(0,0,0,0.05);
+    }
+
+    .cl-check-cell.checked {
+      opacity: 1;
+    }
+
+    .cl-check-cell.unchecked {
+      opacity: 0.2;
+    }
+
+    .cl-check-cell img {
+      width: 24px;
+      height: 24px;
+      object-fit: contain;
+    }
+
+    .cl-q-text {
+      text-align: center;
+      font-weight: 500;
+      word-break: break-word;
+      line-height: 1.5;
+    }
+
+    .cl-comments {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.5rem;
+      margin-top: 0.5rem;
+    }
+
+    .cl-comment {
+      padding: 0.4rem 0.7rem;
+      border-radius: 8px;
+      background: rgba(255,255,255,0.6);
+      font-size: 0.85rem;
+      line-height: 1.5;
+      word-break: break-word;
+    }
+
+    .cl-comment-a { text-align: left; }
+    .cl-comment-b { text-align: right; }
+
+    /* Separator */
+    .cl-separator {
+      border: none;
+      border-top: 1.5px dashed #ccc;
+      margin: 0.8rem 0;
+    }
+
+    /* Category title */
+    .cl-category-title {
+      text-align: center;
+      font-weight: 700;
+      font-size: 1.05rem;
+      color: #444;
+      padding: 0.6rem 0;
+      margin: 0.4rem 0;
+      letter-spacing: 0.03em;
+    }
+
+    /* ===== Editor: Item Cards ===== */
+    .cl-item-card {
+      border: 1.5px solid #e8eaf0;
+      border-radius: 10px;
+      padding: 0.9rem 1rem;
+      margin-bottom: 0.7rem;
+      background: #fafbfc;
+      cursor: grab;
+    }
+    .cl-item-card:active { cursor: grabbing; }
+
+    .cl-item-card-header {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      margin-bottom: 0.6rem;
+      flex-wrap: wrap;
+    }
+
+    .cl-badge {
+      font-size: 0.72rem;
+      font-weight: 700;
+      padding: 0.15rem 0.55rem;
+      border-radius: 20px;
+      text-transform: uppercase;
+    }
+    .cl-badge-question { background: #dbeafe; color: #2563eb; }
+    .cl-badge-sep { background: #fef3c7; color: #d97706; }
+    .cl-badge-cat { background: #dcfce7; color: #16a34a; }
+
+    .cl-item-body { display: flex; flex-direction: column; gap: 0.5rem; }
+
+    /* ===== Font Style Row ===== */
+    .cl-font-row {
+      display: grid;
+      grid-template-columns: 1fr 70px 40px;
+      gap: 0.4rem;
+      align-items: end;
+    }
+
+    .cl-font-row .form-group { margin-bottom: 0; }
+
+    /* ===== Check Shape Preview ===== */
+    .cl-shape-preview {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 28px;
+      height: 28px;
+      font-size: 1.1rem;
+    }
+
+    /* ===== Polaroid Tilt Controls ===== */
+    .cl-tilt-controls {
+      margin-top: 0.5rem;
+      padding: 0.6rem;
+      background: #f8f9fb;
+      border: 1.5px solid #e8eaf0;
+      border-radius: 8px;
+    }
+
+    .cl-tilt-row {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 0.3rem;
+    }
+    .cl-tilt-row:last-child { margin-bottom: 0; }
+    .cl-tilt-row label {
+      font-size: 0.8rem;
+      font-weight: 500;
+      color: #555;
+      min-width: 30px;
+    }
+    .cl-tilt-row input[type="range"] { flex: 1; }
+    .cl-tilt-val {
+      font-size: 0.78rem;
+      color: #999;
+      min-width: 38px;
+      text-align: right;
+    }
+
+    /* ===== Char editor compact ===== */
+    .cl-char-editor {
+      border: 1.5px solid #e8eaf0;
+      border-radius: 10px;
+      padding: 0.8rem;
+      margin-bottom: 0.6rem;
+      background: #fafbfc;
+    }
+    .cl-char-editor-title {
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: #4A90D9;
+      margin-bottom: 0.5rem;
+    }
+
+    /* Blur slider row */
+    .cl-blur-row {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .cl-blur-row input[type="range"] { flex: 1; }
+    .cl-blur-val {
+      font-size: 0.8rem;
+      color: #999;
+      min-width: 36px;
+      text-align: right;
+    }
+
+    /* Custom check image preview */
+    .cl-custom-check-preview {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+    .cl-custom-check-preview img {
+      width: 24px;
+      height: 24px;
+      object-fit: contain;
+      border: 1px solid #e0e3ea;
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body class="split-page">
+  <div class="page-wrapper">
+    <header class="page-header">
+      <a href="index.html" class="back-link">
+        <i class="fa-solid fa-chevron-left"></i> 메인으로
+      </a>
+      <h1>✅ 체크리스트</h1>
+    </header>
+
+    <div class="mobile-tabs">
+      <button class="mobile-tab-btn active" data-tab="editor" onclick="switchTab('editor')">
+        <i class="fa-solid fa-pen-to-square"></i> 편집
+      </button>
+      <button class="mobile-tab-btn" data-tab="preview" onclick="switchTab('preview')">
+        <i class="fa-solid fa-eye"></i> 미리보기
+      </button>
+    </div>
+
+    <div class="split-layout">
+      <!-- ========== EDITOR ========== -->
+      <div class="editor-panel" id="editorPanel">
+
+        <!-- 배경 설정 -->
+        <div class="accordion-section" id="accordionBg">
+          <div class="accordion-header" onclick="toggleAccordion('accordionBg')">
+            <span class="accordion-title"><i class="fa-solid fa-image"></i> 배경 설정</span>
+            <i class="fa-solid fa-chevron-down accordion-toggle-icon"></i>
+          </div>
+          <div class="accordion-body">
+            <div class="form-group">
+              <label class="form-label">배경 색상</label>
+              <input type="color" id="bgColor" value="#f8f9fb" oninput="renderPreview()" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">배경 이미지</label>
+              <div style="display:flex; align-items:center; gap:0.5rem;">
+                <button class="btn btn-secondary btn-sm" onclick="document.getElementById('bgImgFile').click()">
+                  <i class="fa-solid fa-upload"></i> 업로드
+                </button>
+                <button class="btn btn-danger btn-sm" id="bgImgClearBtn" onclick="clearBgImage()" style="display:none;">
+                  <i class="fa-solid fa-xmark"></i> 제거
+                </button>
+                <input type="file" id="bgImgFile" accept="image/*" style="display:none" onchange="onBgImageUpload(event)" />
+              </div>
+            </div>
+            <div class="form-group" id="blurGroup" style="display:none;">
+              <label class="form-label">블러 강도</label>
+              <div class="cl-blur-row">
+                <input type="range" id="bgBlur" min="0" max="20" value="0" step="1" oninput="onBlurChange()" />
+                <span class="cl-blur-val" id="bgBlurVal">0px</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 캐릭터 설정 -->
+        <div class="accordion-section" id="accordionChar">
+          <div class="accordion-header" onclick="toggleAccordion('accordionChar')">
+            <span class="accordion-title"><i class="fa-solid fa-users"></i> 캐릭터 설정</span>
+            <i class="fa-solid fa-chevron-down accordion-toggle-icon"></i>
+          </div>
+          <div class="accordion-body">
+            <div class="form-group">
+              <label class="form-label">이미지 형태</label>
+              <select id="imgShape" class="form-select" onchange="onShapeChange()">
+                <option value="circle">⭕ 원형</option>
+                <option value="rounded">🔲 둥근사각형</option>
+                <option value="square">⬜ 사각형</option>
+                <option value="diamond">◆ 마름모</option>
+                <option value="polaroid">📷 폴라로이드</option>
+              </select>
+            </div>
+
+            <div id="polaroidTiltSection" style="display:none;">
+              <div class="cl-tilt-controls">
+                <div class="cl-tilt-row">
+                  <label>A</label>
+                  <input type="range" id="tiltA" min="-15" max="15" value="-3" step="1" oninput="onTiltChange()" />
+                  <span class="cl-tilt-val" id="tiltAVal">-3°</span>
+                </div>
+                <div class="cl-tilt-row">
+                  <label>B</label>
+                  <input type="range" id="tiltB" min="-15" max="15" value="3" step="1" oninput="onTiltChange()" />
+                  <span class="cl-tilt-val" id="tiltBVal">3°</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Character A -->
+            <div class="cl-char-editor">
+              <div class="cl-char-editor-title">캐릭터 A</div>
+              <div class="form-group">
+                <label class="form-label">이름</label>
+                <input type="text" id="charAName" class="form-input" placeholder="캐릭터 A" value="캐릭터 A" oninput="renderPreview()" />
+              </div>
+              <div class="form-group">
+                <label class="form-label">이미지</label>
+                <div style="display:flex;align-items:center;gap:0.5rem;">
+                  <button class="btn btn-secondary btn-sm" onclick="document.getElementById('charAImgFile').click()">
+                    <i class="fa-solid fa-upload"></i> 업로드
+                  </button>
+                  <button class="btn btn-danger btn-sm" id="charAImgClear" onclick="clearCharImage('A')" style="display:none;">
+                    <i class="fa-solid fa-xmark"></i>
+                  </button>
+                  <input type="file" id="charAImgFile" accept="image/*" style="display:none" onchange="onCharImageUpload(event,'A')" />
+                </div>
+              </div>
+            </div>
+
+            <!-- Character B -->
+            <div class="cl-char-editor">
+              <div class="cl-char-editor-title">캐릭터 B</div>
+              <div class="form-group">
+                <label class="form-label">이름</label>
+                <input type="text" id="charBName" class="form-input" placeholder="캐릭터 B" value="캐릭터 B" oninput="renderPreview()" />
+              </div>
+              <div class="form-group">
+                <label class="form-label">이미지</label>
+                <div style="display:flex;align-items:center;gap:0.5rem;">
+                  <button class="btn btn-secondary btn-sm" onclick="document.getElementById('charBImgFile').click()">
+                    <i class="fa-solid fa-upload"></i> 업로드
+                  </button>
+                  <button class="btn btn-danger btn-sm" id="charBImgClear" onclick="clearCharImage('B')" style="display:none;">
+                    <i class="fa-solid fa-xmark"></i>
+                  </button>
+                  <input type="file" id="charBImgFile" accept="image/*" style="display:none" onchange="onCharImageUpload(event,'B')" />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 체크 마크 설정 -->
+        <div class="accordion-section" id="accordionCheck">
+          <div class="accordion-header" onclick="toggleAccordion('accordionCheck')">
+            <span class="accordion-title"><i class="fa-solid fa-check-double"></i> 체크 마크 설정</span>
+            <i class="fa-solid fa-chevron-down accordion-toggle-icon"></i>
+          </div>
+          <div class="accordion-body">
+            <div class="form-group">
+              <label class="form-label">체크 모양</label>
+              <select id="checkShape" class="form-select" onchange="onCheckShapeChange()">
+                <option value="check">✓ 체크</option>
+                <option value="circle">● 원</option>
+                <option value="star">★ 별</option>
+                <option value="heart">♥ 하트</option>
+                <option value="cross">✕ 엑스</option>
+                <option value="custom">🖼️ 커스텀 이미지</option>
+              </select>
+            </div>
+            <div class="form-group" id="customCheckGroup" style="display:none;">
+              <label class="form-label">커스텀 체크 이미지</label>
+              <div class="cl-custom-check-preview">
+                <button class="btn btn-secondary btn-sm" onclick="document.getElementById('customCheckFile').click()">
+                  <i class="fa-solid fa-upload"></i> 업로드
+                </button>
+                <img id="customCheckPreview" src="" alt="" style="display:none;" />
+                <input type="file" id="customCheckFile" accept="image/*" style="display:none" onchange="onCustomCheckUpload(event)" />
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">체크 색상</label>
+              <input type="color" id="checkColor" value="#e9658b" oninput="renderPreview()" />
+            </div>
+          </div>
+        </div>
+
+        <!-- 글꼴 & 스타일 -->
+        <div class="accordion-section" id="accordionFont">
+          <div class="accordion-header" onclick="toggleAccordion('accordionFont')">
+            <span class="accordion-title"><i class="fa-solid fa-font"></i> 글꼴 & 스타일</span>
+            <i class="fa-solid fa-chevron-down accordion-toggle-icon"></i>
+          </div>
+          <div class="accordion-body">
+            <!-- A Name -->
+            <div class="form-group">
+              <label class="form-label">캐릭터 A 이름</label>
+              <div class="cl-font-row">
+                <select id="fontAName" class="form-select" onchange="renderPreview()">
+                  <option value="Pretendard">Pretendard</option>
+                  <option value="RIDIBatang">리디바탕</option>
+                  <option value="Nanum Gothic">나눔고딕</option>
+                  <option value="Nanum Myeongjo">나눔명조</option>
+                </select>
+                <input type="number" id="sizeAName" class="form-input" value="14" min="8" max="40" oninput="renderPreview()" />
+                <input type="color" id="colorAName" value="#333333" oninput="renderPreview()" />
+              </div>
+            </div>
+            <!-- B Name -->
+            <div class="form-group">
+              <label class="form-label">캐릭터 B 이름</label>
+              <div class="cl-font-row">
+                <select id="fontBName" class="form-select" onchange="renderPreview()">
+                  <option value="Pretendard">Pretendard</option>
+                  <option value="RIDIBatang">리디바탕</option>
+                  <option value="Nanum Gothic">나눔고딕</option>
+                  <option value="Nanum Myeongjo">나눔명조</option>
+                </select>
+                <input type="number" id="sizeBName" class="form-input" value="14" min="8" max="40" oninput="renderPreview()" />
+                <input type="color" id="colorBName" value="#333333" oninput="renderPreview()" />
+              </div>
+            </div>
+            <!-- Question -->
+            <div class="form-group">
+              <label class="form-label">질문 텍스트</label>
+              <div class="cl-font-row">
+                <select id="fontQ" class="form-select" onchange="renderPreview()">
+                  <option value="Pretendard">Pretendard</option>
+                  <option value="RIDIBatang">리디바탕</option>
+                  <option value="Nanum Gothic">나눔고딕</option>
+                  <option value="Nanum Myeongjo">나눔명조</option>
+                </select>
+                <input type="number" id="sizeQ" class="form-input" value="14" min="8" max="40" oninput="renderPreview()" />
+                <input type="color" id="colorQ" value="#333333" oninput="renderPreview()" />
+              </div>
+            </div>
+            <!-- A Comment -->
+            <div class="form-group">
+              <label class="form-label">A 코멘트</label>
+              <div class="cl-font-row">
+                <select id="fontACmt" class="form-select" onchange="renderPreview()">
+                  <option value="Pretendard">Pretendard</option>
+                  <option value="RIDIBatang">리디바탕</option>
+                  <option value="Nanum Gothic">나눔고딕</option>
+                  <option value="Nanum Myeongjo">나눔명조</option>
+                </select>
+                <input type="number" id="sizeACmt" class="form-input" value="13" min="8" max="40" oninput="renderPreview()" />
+                <input type="color" id="colorACmt" value="#666666" oninput="renderPreview()" />
+              </div>
+            </div>
+            <!-- B Comment -->
+            <div class="form-group">
+              <label class="form-label">B 코멘트</label>
+              <div class="cl-font-row">
+                <select id="fontBCmt" class="form-select" onchange="renderPreview()">
+                  <option value="Pretendard">Pretendard</option>
+                  <option value="RIDIBatang">리디바탕</option>
+                  <option value="Nanum Gothic">나눔고딕</option>
+                  <option value="Nanum Myeongjo">나눔명조</option>
+                </select>
+                <input type="number" id="sizeBCmt" class="form-input" value="13" min="8" max="40" oninput="renderPreview()" />
+                <input type="color" id="colorBCmt" value="#666666" oninput="renderPreview()" />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 체크리스트 편집 -->
+        <div class="accordion-section" id="accordionItems">
+          <div class="accordion-header" onclick="toggleAccordion('accordionItems')">
+            <span class="accordion-title"><i class="fa-solid fa-list-check"></i> 체크리스트 편집</span>
+            <i class="fa-solid fa-chevron-down accordion-toggle-icon"></i>
+          </div>
+          <div class="accordion-body">
+            <div class="btn-group" style="margin-bottom:0.9rem;">
+              <button class="btn btn-primary btn-sm" onclick="addItem('question')">
+                <i class="fa-solid fa-plus"></i> 질문 추가
+              </button>
+              <button class="btn btn-warning btn-sm" onclick="addItem('separator')">
+                <i class="fa-solid fa-minus"></i> 구분선 추가
+              </button>
+              <button class="btn btn-success btn-sm" onclick="addItem('category')">
+                <i class="fa-solid fa-heading"></i> 카테고리 추가
+              </button>
+              <button class="btn btn-danger btn-sm" onclick="clearAllItems()">
+                <i class="fa-solid fa-trash"></i> 전체삭제
+              </button>
+            </div>
+            <div id="itemList">
+              <div class="empty-state">
+                <i class="fa-regular fa-square-check"></i>
+                <p>항목을 추가해 보세요</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 내보내기 -->
+        <div class="export-section">
+          <div class="section-title"><i class="fa-solid fa-share-nodes"></i> 내보내기</div>
+          <div class="btn-group">
+            <button class="btn btn-secondary btn-sm" onclick="copyHTML()"><i class="fa-solid fa-code"></i> HTML 복사</button>
+            <button class="btn btn-secondary btn-sm" onclick="saveJSON()"><i class="fa-solid fa-download"></i> JSON 저장</button>
+            <button class="btn btn-secondary btn-sm" onclick="document.getElementById('loadFile').click()"><i class="fa-solid fa-upload"></i> 불러오기</button>
+            <button class="btn btn-primary btn-sm" onclick="saveImage()"><i class="fa-solid fa-image"></i> 이미지 저장</button>
+          </div>
+          <input type="file" id="loadFile" accept=".json" style="display:none" onchange="loadJSON(event)" />
+        </div>
+
+      </div>
+
+      <!-- ========== PREVIEW ========== -->
+      <div class="preview-panel" id="previewPanel">
+        <div class="preview-inner" style="max-width:560px;">
+          <div id="checklistPreview" class="cl-preview-area">
+            <div class="cl-bg-layer" id="bgLayer"></div>
+            <div class="cl-content" id="clContent">
+              <div class="cl-characters" id="clCharacters"></div>
+              <div class="cl-items-area" id="clItemsArea"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+  <script src="js/checklist.js"></script>
+</body>
+</html>
