@@ -19,6 +19,7 @@ const NODE_SHAPES = [
 
 // ===================== INIT =====================
 document.addEventListener('DOMContentLoaded', () => {
+  populateFontSelect('fontSelect', 'Pretendard');
   renderProfiles();
   renderNodes();
   renderPreview();
@@ -72,10 +73,7 @@ function updateProfile(id, field, value) {
   if (profile) {
     profile[field] = value;
     renderPreview();
-    // 이름 변경 시 관계 UI도 갱신
-    if (field === 'name') {
-      renderRelationsUI();
-    }
+    if (field === 'name') renderRelationsUI();
   }
 }
 
@@ -106,18 +104,13 @@ function removeProfileImage(id) {
 // ===================== RELATION MANAGEMENT =====================
 function rebuildRelations() {
   const newRelations = [];
-  // 인접 인물 쌍만 (0↔1, 1↔2)
   for (let i = 0; i < state.profiles.length - 1; i++) {
     const a = state.profiles[i].id;
     const b = state.profiles[i + 1].id;
     const existing = state.relations.find(r =>
       (r.from === a && r.to === b) || (r.from === b && r.to === a)
     );
-    newRelations.push({
-      from: a,
-      to: b,
-      label: existing ? existing.label : '',
-    });
+    newRelations.push({ from: a, to: b, label: existing ? existing.label : '' });
   }
   state.relations = newRelations;
 }
@@ -126,10 +119,7 @@ function updateRelation(fromId, toId, value) {
   const rel = state.relations.find(r =>
     (r.from === fromId && r.to === toId) || (r.from === toId && r.to === fromId)
   );
-  if (rel) {
-    rel.label = value;
-    renderPreview();
-  }
+  if (rel) { rel.label = value; renderPreview(); }
 }
 
 function getRelationLabel(idA, idB) {
@@ -225,7 +215,6 @@ function renderProfiles() {
   renderRelationsUI();
 }
 
-// 카드 접기/펼치기 토글
 function toggleCardBody(btn) {
   const card = btn.closest('.character-card');
   const body = card.querySelector('.character-card-body');
@@ -259,14 +248,7 @@ function getShapeChar(shape) {
 // ===================== NODE MANAGEMENT =====================
 function addNode() {
   const id = state.nextNodeId++;
-  state.nodes.push({
-    id,
-    time: '',
-    desc: '',
-    gap: 40,
-    color: '#4A90D9',
-    shape: 'circle',
-  });
+  state.nodes.push({ id, time: '', desc: '', gap: 40, color: '#4A90D9', shape: 'circle' });
   renderNodes();
   renderPreview();
 }
@@ -398,16 +380,6 @@ function getSelectedFont() {
   return sel ? sel.value : 'Pretendard';
 }
 
-function getFontStack(font) {
-  const stacks = {
-    'Pretendard': "'Pretendard', 'Noto Sans KR', -apple-system, BlinkMacSystemFont, system-ui, sans-serif",
-    'RIDIBatang': "'RIDIBatang', 'Noto Sans KR', serif",
-    'Nanum Gothic': "'Nanum Gothic', 'Noto Sans KR', sans-serif",
-    'Nanum Myeongjo': "'Nanum Myeongjo', 'Noto Sans KR', serif",
-  };
-  return stacks[font] || stacks['Pretendard'];
-}
-
 function renderPreview() {
   const font = getSelectedFont();
   const previewEl = document.getElementById('timelinePreview');
@@ -443,11 +415,9 @@ function renderProfilesPreview() {
     return;
   }
 
-  // 항상 한 줄 가로 배치: 인물1 ←→ 인물2 ←→ 인물3
   let html = '<div class="profiles-inline">';
 
   state.profiles.forEach((p, idx) => {
-    // 인접 인물 사이에 관계 화살표 표시
     if (idx > 0) {
       const prevP = state.profiles[idx - 1];
       const relLabel = getRelationLabel(prevP.id, p.id);
@@ -486,7 +456,6 @@ function renderTimelinePreview() {
   }
 
   const align = document.getElementById('alignSelect') ? document.getElementById('alignSelect').value : 'left';
-  const bgColor = sanitizeColor(document.getElementById('bgColor') ? document.getElementById('bgColor').value : '', '#fdf8f0');
   const lineColor = sanitizeColor(document.getElementById('lineColor') ? document.getElementById('lineColor').value : '', '#c8a97e');
   const timeTextColor = sanitizeColor(document.getElementById('timeTextColor') ? document.getElementById('timeTextColor').value : '', '#4A90D9');
   const descTextColor = sanitizeColor(document.getElementById('descTextColor') ? document.getElementById('descTextColor').value : '', '#555555');
@@ -518,7 +487,6 @@ function renderTimelinePreview() {
     `;
   });
 
-  // 연결선 위치 — 마커 중심에 맞춤
   let linePos = '';
   if (align === 'right') {
     linePos = 'right:6px;left:auto;';
@@ -584,7 +552,7 @@ body{font-family:'Noto Sans KR',-apple-system,sans-serif;background:#f5f7fa;disp
 ${preview.outerHTML}
 </body>
 </html>`;
-  navigator.clipboard.writeText(html).then(() => alert('HTML이 클립보드에 복사되었습니다!'))
+  navigator.clipboard.writeText(html).then(() => alert('HTML이 클립���드에 복사되었습니다!'))
     .catch(() => {
       const ta = document.createElement('textarea');
       ta.value = html;
@@ -629,19 +597,14 @@ function loadJSON(event) {
       const data = JSON.parse(e.target.result);
       if (data.profiles) {
         state.profiles = data.profiles.slice(0, 3).map(p => ({
-          id: p.id,
-          name: p.name || '',
-          imgUrl: p.imgUrl || '',
+          id: p.id, name: p.name || '', imgUrl: p.imgUrl || '',
         }));
       }
       if (data.nodes) {
         state.nodes = data.nodes.map(n => ({
-          id: n.id,
-          time: n.time || '',
-          desc: n.desc || '',
+          id: n.id, time: n.time || '', desc: n.desc || '',
           gap: n.gap !== undefined ? n.gap : 40,
-          color: n.color || '#4A90D9',
-          shape: n.shape || 'circle',
+          color: n.color || '#4A90D9', shape: n.shape || 'circle',
         }));
       }
       if (data.relations) {
@@ -651,7 +614,7 @@ function loadJSON(event) {
       }
       if (data.nextProfileId) state.nextProfileId = data.nextProfileId;
       if (data.nextNodeId) state.nextNodeId = data.nextNodeId;
-      if (data.font) document.getElementById('fontSelect').value = data.font;
+      if (data.font) populateFontSelect('fontSelect', data.font);
       if (data.align && document.getElementById('alignSelect')) document.getElementById('alignSelect').value = data.align;
       if (data.bgColor && document.getElementById('bgColor')) document.getElementById('bgColor').value = data.bgColor;
       if (data.lineColor && document.getElementById('lineColor')) document.getElementById('lineColor').value = data.lineColor;
@@ -673,42 +636,26 @@ function loadJSON(event) {
 function saveImage() {
   const preview = document.getElementById('timelinePreview');
   const bgColor = document.getElementById('bgColor') ? document.getElementById('bgColor').value : '#fdf8f0';
-  html2canvas(preview, {
-    scale: 2,
-    backgroundColor: bgColor,
-    useCORS: true,
-  }).then(canvas => {
-    const a = document.createElement('a');
-    a.href = canvas.toDataURL('image/png');
-    a.download = 'timeline-preview.png';
-    a.click();
-  }).catch(() => alert('이미지 저장 중 오류가 발생했습니다.'));
+  html2canvas(preview, { scale: 2, backgroundColor: bgColor, useCORS: true })
+    .then(canvas => {
+      const a = document.createElement('a');
+      a.href = canvas.toDataURL('image/png');
+      a.download = 'timeline-preview.png';
+      a.click();
+    }).catch(() => alert('이미지 저장 중 오류가 발생했습니다.'));
 }
 
 // ===================== HELPERS =====================
 function esc(str) {
-  return String(str)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
+  return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
 function escDesc(str) {
-  return String(str)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/\n/g, '<br>');
+  return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/\n/g, '<br>');
 }
 
 function escAttr(str) {
-  return String(str)
-    .replace(/&/g, '&amp;')
-    .replace(/"/g, '&quot;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;');
+  return String(str).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
 function sanitizeColor(color, fallback) {
