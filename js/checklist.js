@@ -1,5 +1,5 @@
 /* ================================================================
-   checklist.js — Chat Backup 체크리스트 페이지 로직 (v3)
+   checklist.js — Chat Backup 체크리스트 페이지 로직 (v4)
    ================================================================ */
 
 // ─── State ─────────────────────────────────────────────
@@ -11,6 +11,8 @@ let state = {
   bgBlur: 0,
   boxColor: '#ffffff',
   boxOpacity: 60,
+  qRowColor: '#ffffff',
+  qRowOpacity: 85,
   imgShape: 'circle',
   imgShadow: false,
   tiltA: -3,
@@ -49,6 +51,10 @@ const SEP_STYLES = [
 
 // ─── Init ──────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
+  // 전역 글꼴로 모든 font select 채우기
+  populateAllFontSelects([
+    'fontTitle', 'fontAName', 'fontBName', 'fontQ', 'fontACmt', 'fontBCmt', 'fontCat'
+  ]);
   renderPreview();
   initSortable();
 });
@@ -72,7 +78,7 @@ function switchTab(tab) {
   }
 }
 
-// ─── Background ─────────────────��──────────────────────
+// ─── Background ────────────────────────────────────────
 function onBgImageUpload(e) {
   const file = e.target.files[0];
   if (!file) return;
@@ -103,6 +109,12 @@ function onBlurChange() {
 function onBoxOpacityChange() {
   state.boxOpacity = parseInt(document.getElementById('boxOpacity').value);
   document.getElementById('boxOpacityVal').textContent = state.boxOpacity + '%';
+  renderPreview();
+}
+
+function onQRowOpacityChange() {
+  state.qRowOpacity = parseInt(document.getElementById('qRowOpacity').value);
+  document.getElementById('qRowOpacityVal').textContent = state.qRowOpacity + '%';
   renderPreview();
 }
 
@@ -373,9 +385,9 @@ function initSortable() {
 // ─── hex → rgba helper ─────────────────────────────────
 function hexToRgba(hex, opacity) {
   const r = parseInt(hex.slice(1, 3), 16);
-  const g = parseInt(hex.slice(3, 5), 16);
+  const gg = parseInt(hex.slice(3, 5), 16);
   const b = parseInt(hex.slice(5, 7), 16);
-  return `rgba(${r},${g},${b},${opacity / 100})`;
+  return `rgba(${r},${gg},${b},${opacity / 100})`;
 }
 
 // ─── Preview render ────────────────────────────────────
@@ -385,6 +397,8 @@ function renderPreview() {
   state.bgColor = document.getElementById('bgColor').value;
   state.boxColor = document.getElementById('boxColor').value;
   state.boxOpacity = parseInt(document.getElementById('boxOpacity').value);
+  state.qRowColor = document.getElementById('qRowColor').value;
+  state.qRowOpacity = parseInt(document.getElementById('qRowOpacity').value);
   state.imgShadow = document.getElementById('imgShadow').checked;
   state.checkA.color = document.getElementById('checkColorA').value;
   state.checkB.color = document.getElementById('checkColorB').value;
@@ -492,7 +506,6 @@ function getCheckContent(checked, who) {
   return `<span style="color:${cfg.color};">${sym}</span>`;
 }
 
-// ─── SVG wave with dynamic color ───────────────────────
 function waveSvgBg(color) {
   const encoded = encodeURIComponent(color);
   return `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='12' viewBox='0 0 100 12'%3E%3Cpath d='M0 6 Q12.5 0 25 6 T50 6 T75 6 T100 6' fill='none' stroke='${encoded}' stroke-width='1.5'/%3E%3C/svg%3E")`;
@@ -501,6 +514,7 @@ function waveSvgBg(color) {
 function renderItems() {
   const area = document.getElementById('clItemsArea');
   const f = state.fonts;
+  const qRowBg = hexToRgba(state.qRowColor, state.qRowOpacity);
 
   if (state.items.length === 0) {
     area.innerHTML = `<div class="empty-state" style="padding:2rem;"><i class="fa-regular fa-square-check"></i><p>항목을 추가하면 여기에 표시됩니다</p></div>`;
@@ -547,7 +561,7 @@ function renderItems() {
       }
 
       html += `
-        <div class="cl-question-row">
+        <div class="cl-question-row" style="background:${qRowBg};">
           <div class="cl-q-main">
             <div class="cl-check-cell ${item.checkA ? 'checked' : 'unchecked'}">${checkAFinal}</div>
             <div class="cl-q-text" style="font-family:'${f.q.family}',sans-serif;font-size:${f.q.size}px;color:${f.q.color};">${escHTML(item.question) || '질문을 입력하세요'}</div>
@@ -561,7 +575,7 @@ function renderItems() {
   area.innerHTML = html;
 }
 
-// ─── Export: Copy HTML ─────────────────────────────────
+// ─── Export ────────────────────────────────────────────
 function copyHTML() {
   const el = document.getElementById('checklistPreview');
   navigator.clipboard.writeText(el.outerHTML).then(() => {
@@ -577,7 +591,6 @@ function copyHTML() {
   });
 }
 
-// ─── Export: Save JSON ─────────────────────────────────
 function saveJSON() {
   renderPreview();
   const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
@@ -589,7 +602,6 @@ function saveJSON() {
   URL.revokeObjectURL(url);
 }
 
-// ─── Export: Load JSON ─────────────────────────────────
 function loadJSON(e) {
   const file = e.target.files[0];
   if (!file) return;
@@ -601,6 +613,7 @@ function loadJSON(e) {
         mainTitle: '', titleShadow: false,
         bgColor: '#f8f9fb', bgImage: '', bgBlur: 0,
         boxColor: '#ffffff', boxOpacity: 60,
+        qRowColor: '#ffffff', qRowOpacity: 85,
         imgShape: 'circle', imgShadow: false, tiltA: -3, tiltB: 3,
         charA: { name: '캐릭터 A', image: '' },
         charB: { name: '캐릭터 B', image: '' },
@@ -619,7 +632,6 @@ function loadJSON(e) {
       };
       state = Object.assign(defaults, data);
 
-      // Old format migration
       if (data.checkShape && !data.checkA) {
         state.checkA = { shape: data.checkShape, color: data.checkColor || '#4A90D9', customImage: data.customCheckImage || '' };
         state.checkB = { shape: data.checkShape, color: data.checkColor || '#e9658b', customImage: data.customCheckImage || '' };
@@ -646,6 +658,9 @@ function restoreEditorFromState() {
   document.getElementById('boxColor').value = state.boxColor || '#ffffff';
   document.getElementById('boxOpacity').value = state.boxOpacity ?? 60;
   document.getElementById('boxOpacityVal').textContent = (state.boxOpacity ?? 60) + '%';
+  document.getElementById('qRowColor').value = state.qRowColor || '#ffffff';
+  document.getElementById('qRowOpacity').value = state.qRowOpacity ?? 85;
+  document.getElementById('qRowOpacityVal').textContent = (state.qRowOpacity ?? 85) + '%';
   document.getElementById('imgShape').value = state.imgShape || 'circle';
   document.getElementById('imgShadow').checked = !!state.imgShadow;
   document.getElementById('polaroidTiltSection').style.display = state.imgShape === 'polaroid' ? '' : 'none';
@@ -683,53 +698,39 @@ function restoreEditorFromState() {
   document.getElementById('charBImgClear').style.display = state.charB.image ? '' : 'none';
 
   const f = state.fonts;
-  document.getElementById('fontTitle').value = f.title.family;
+  populateFontSelect('fontTitle', f.title.family);
   document.getElementById('sizeTitle').value = f.title.size;
   document.getElementById('colorTitle').value = f.title.color;
-  document.getElementById('fontAName').value = f.aName.family;
+  populateFontSelect('fontAName', f.aName.family);
   document.getElementById('sizeAName').value = f.aName.size;
   document.getElementById('colorAName').value = f.aName.color;
-  document.getElementById('fontBName').value = f.bName.family;
+  populateFontSelect('fontBName', f.bName.family);
   document.getElementById('sizeBName').value = f.bName.size;
   document.getElementById('colorBName').value = f.bName.color;
-  document.getElementById('fontQ').value = f.q.family;
+  populateFontSelect('fontQ', f.q.family);
   document.getElementById('sizeQ').value = f.q.size;
   document.getElementById('colorQ').value = f.q.color;
-  document.getElementById('fontACmt').value = f.aCmt.family;
+  populateFontSelect('fontACmt', f.aCmt.family);
   document.getElementById('sizeACmt').value = f.aCmt.size;
   document.getElementById('colorACmt').value = f.aCmt.color;
-  document.getElementById('fontBCmt').value = f.bCmt.family;
+  populateFontSelect('fontBCmt', f.bCmt.family);
   document.getElementById('sizeBCmt').value = f.bCmt.size;
   document.getElementById('colorBCmt').value = f.bCmt.color;
-  document.getElementById('fontCat').value = f.cat.family;
+  populateFontSelect('fontCat', f.cat.family);
   document.getElementById('sizeCat').value = f.cat.size;
   document.getElementById('colorCat').value = f.cat.color;
 }
 
-// ─── Export: Save Image (블러 배경 포함) ───────────────
+// ─── Save Image (블러 배경 포함) ───────────────────────
 function saveImage() {
   const target = document.getElementById('checklistPreview');
-  const bgLayer = document.getElementById('bgLayer');
-
-  // 블러 배경이 있을 경우, 저장 직전에 bgLayer의 inset을 0으로 만들고
-  // 대신 더 큰 scale로 캡처한 뒤 clip하는 방식을 사용.
-  // html2canvas는 CSS filter: blur()를 제대로 캡처 못 하는 경우가 많으므로
-  // 수동으로 배경을 그린다.
 
   if (state.bgImage && state.bgBlur > 0) {
     saveImageWithBlur(target);
   } else {
-    html2canvas(target, {
-      useCORS: true,
-      allowTaint: true,
-      scale: 2,
-      backgroundColor: null
-    }).then(canvas => {
-      downloadCanvas(canvas);
-    }).catch(err => {
-      console.error(err);
-      alert('이미지 저장에 실패했습니다.');
-    });
+    html2canvas(target, { useCORS: true, allowTaint: true, scale: 2, backgroundColor: null })
+      .then(canvas => downloadCanvas(canvas))
+      .catch(err => { console.error(err); alert('이미지 저장에 실패했습니다.'); });
   }
 }
 
@@ -739,7 +740,6 @@ function saveImageWithBlur(target) {
   const w = rect.width * scale;
   const h = rect.height * scale;
 
-  // 1) 배경 이미지를 블러 처리하여 캔버스에 그리기
   const bgImg = new Image();
   bgImg.crossOrigin = 'anonymous';
   bgImg.onload = () => {
@@ -748,88 +748,69 @@ function saveImageWithBlur(target) {
     bgCanvas.height = h;
     const bgCtx = bgCanvas.getContext('2d');
 
-    // 배경 이미지를 cover 방식으로 그리기
     const imgRatio = bgImg.width / bgImg.height;
     const canvasRatio = w / h;
     let sx, sy, sw, sh;
     if (imgRatio > canvasRatio) {
-      sh = bgImg.height;
-      sw = sh * canvasRatio;
-      sx = (bgImg.width - sw) / 2;
-      sy = 0;
+      sh = bgImg.height; sw = sh * canvasRatio;
+      sx = (bgImg.width - sw) / 2; sy = 0;
     } else {
-      sw = bgImg.width;
-      sh = sw / canvasRatio;
-      sx = 0;
-      sy = (bgImg.height - sh) / 2;
+      sw = bgImg.width; sh = sw / canvasRatio;
+      sx = 0; sy = (bgImg.height - sh) / 2;
     }
 
     bgCtx.filter = `blur(${state.bgBlur * scale}px)`;
-    // 확장해서 그려서 가장자리 하얀 부분 방지
     const expand = state.bgBlur * scale * 2;
     bgCtx.drawImage(bgImg, sx, sy, sw, sh, -expand, -expand, w + expand * 2, h + expand * 2);
     bgCtx.filter = 'none';
 
-    // 2) 배경 레이어 숨기고 콘텐츠만 html2canvas로 캡처
     const bgLayer = document.getElementById('bgLayer');
     const origDisplay = bgLayer.style.display;
     bgLayer.style.display = 'none';
-
-    // 배경색도 투명으로
     const origBgColor = target.style.backgroundColor;
     target.style.backgroundColor = 'transparent';
 
-    html2canvas(target, {
-      useCORS: true,
-      allowTaint: true,
-      scale: scale,
-      backgroundColor: null
-    }).then(contentCanvas => {
-      // 복원
-      bgLayer.style.display = origDisplay;
-      target.style.backgroundColor = origBgColor;
+    html2canvas(target, { useCORS: true, allowTaint: true, scale, backgroundColor: null })
+      .then(contentCanvas => {
+        bgLayer.style.display = origDisplay;
+        target.style.backgroundColor = origBgColor;
 
-      // 3) 합성
-      const finalCanvas = document.createElement('canvas');
-      finalCanvas.width = w;
-      finalCanvas.height = h;
-      const fCtx = finalCanvas.getContext('2d');
+        const finalCanvas = document.createElement('canvas');
+        finalCanvas.width = w;
+        finalCanvas.height = h;
+        const fCtx = finalCanvas.getContext('2d');
 
-      // 둥근 모서리 클립
-      const radius = 16 * scale;
-      fCtx.beginPath();
-      fCtx.moveTo(radius, 0);
-      fCtx.lineTo(w - radius, 0);
-      fCtx.quadraticCurveTo(w, 0, w, radius);
-      fCtx.lineTo(w, h - radius);
-      fCtx.quadraticCurveTo(w, h, w - radius, h);
-      fCtx.lineTo(radius, h);
-      fCtx.quadraticCurveTo(0, h, 0, h - radius);
-      fCtx.lineTo(0, radius);
-      fCtx.quadraticCurveTo(0, 0, radius, 0);
-      fCtx.closePath();
-      fCtx.clip();
+        const radius = 16 * scale;
+        fCtx.beginPath();
+        fCtx.moveTo(radius, 0);
+        fCtx.lineTo(w - radius, 0);
+        fCtx.quadraticCurveTo(w, 0, w, radius);
+        fCtx.lineTo(w, h - radius);
+        fCtx.quadraticCurveTo(w, h, w - radius, h);
+        fCtx.lineTo(radius, h);
+        fCtx.quadraticCurveTo(0, h, 0, h - radius);
+        fCtx.lineTo(0, radius);
+        fCtx.quadraticCurveTo(0, 0, radius, 0);
+        fCtx.closePath();
+        fCtx.clip();
 
-      // 배경 그리기
-      fCtx.drawImage(bgCanvas, 0, 0);
-      // 콘텐츠 그리기
-      fCtx.drawImage(contentCanvas, 0, 0);
+        fCtx.drawImage(bgCanvas, 0, 0);
+        fCtx.drawImage(contentCanvas, 0, 0);
 
-      downloadCanvas(finalCanvas);
-    }).catch(err => {
-      bgLayer.style.display = origDisplay;
-      target.style.backgroundColor = origBgColor;
-      console.error(err);
-      alert('이미지 저장에 실패했습니다.');
-    });
+        downloadCanvas(finalCanvas);
+      })
+      .catch(err => {
+        bgLayer.style.display = origDisplay;
+        target.style.backgroundColor = origBgColor;
+        console.error(err);
+        alert('이미지 저장에 실패했습니다.');
+      });
   };
 
   bgImg.onerror = () => {
-    // 폴백: 일반 html2canvas
-    html2canvas(target, {
-      useCORS: true, allowTaint: true, scale: 2, backgroundColor: null
-    }).then(canvas => downloadCanvas(canvas))
-    .catch(() => alert('이미지 저장에 실패했습니다.'));
+    html2canvas(target, { useCORS: true, allowTaint: true, scale: 2, backgroundColor: null })
+      .then(canvas => downloadCanvas(canvas))
+      .catch(() => alert('이미지 저장에 실패했습니다.'));
   };
 
   bgImg.src = state.bgImage;
