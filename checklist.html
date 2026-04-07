@@ -30,6 +30,15 @@
       padding: 2rem 1.5rem;
     }
 
+    /* ===== Title ===== */
+    .cl-title {
+      text-align: center;
+      font-weight: 700;
+      margin-bottom: 1.5rem;
+      word-break: break-word;
+      line-height: 1.4;
+    }
+
     /* ===== Characters Top ===== */
     .cl-characters {
       display: flex;
@@ -73,10 +82,12 @@
 
     /* Polaroid */
     .cl-polaroid-frame {
-      background: #fff;
-      padding: 8px 8px 30px 8px;
+      background: #FFFFF0;
+      padding: 8px 8px 0 8px;
       box-shadow: 0 4px 16px rgba(0,0,0,0.15);
-      display: inline-block;
+      display: inline-flex;
+      flex-direction: column;
+      align-items: center;
       transition: transform 0.2s;
     }
 
@@ -84,6 +95,16 @@
       width: 110px;
       height: 110px;
       border-radius: 0 !important;
+      background: #e8eaf0;
+    }
+
+    .cl-polaroid-name {
+      width: 100%;
+      text-align: center;
+      padding: 6px 4px 10px;
+      font-weight: 600;
+      word-break: break-word;
+      line-height: 1.3;
     }
 
     .cl-char-name {
@@ -131,13 +152,8 @@
       background: rgba(0,0,0,0.05);
     }
 
-    .cl-check-cell.checked {
-      opacity: 1;
-    }
-
-    .cl-check-cell.unchecked {
-      opacity: 0.2;
-    }
+    .cl-check-cell.checked { opacity: 1; }
+    .cl-check-cell.unchecked { opacity: 1; }
 
     .cl-check-cell img {
       width: 24px;
@@ -171,19 +187,31 @@
     .cl-comment-a { text-align: left; }
     .cl-comment-b { text-align: right; }
 
-    /* Separator */
+    /* Separators */
     .cl-separator {
       border: none;
-      border-top: 1.5px dashed #ccc;
       margin: 0.8rem 0;
+    }
+    .cl-separator.sep-solid { border-top: 1.5px solid #ccc; }
+    .cl-separator.sep-dashed { border-top: 1.5px dashed #ccc; }
+    .cl-separator.sep-dotted { border-top: 2px dotted #ccc; }
+    .cl-separator.sep-double { border-top: 4px double #ccc; }
+    .cl-separator.sep-wave {
+      height: 12px;
+      background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='12' viewBox='0 0 100 12'%3E%3Cpath d='M0 6 Q12.5 0 25 6 T50 6 T75 6 T100 6' fill='none' stroke='%23ccc' stroke-width='1.5'/%3E%3C/svg%3E") repeat-x center;
+      border: none;
+    }
+    .cl-separator-img {
+      margin: 0.8rem auto;
+      display: block;
+      max-width: 100%;
+      height: auto;
     }
 
     /* Category title */
     .cl-category-title {
       text-align: center;
       font-weight: 700;
-      font-size: 1.05rem;
-      color: #444;
       padding: 0.6rem 0;
       margin: 0.4rem 0;
       letter-spacing: 0.03em;
@@ -230,16 +258,6 @@
     }
 
     .cl-font-row .form-group { margin-bottom: 0; }
-
-    /* ===== Check Shape Preview ===== */
-    .cl-shape-preview {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      width: 28px;
-      height: 28px;
-      font-size: 1.1rem;
-    }
 
     /* ===== Polaroid Tilt Controls ===== */
     .cl-tilt-controls {
@@ -313,6 +331,34 @@
       border: 1px solid #e0e3ea;
       border-radius: 4px;
     }
+
+    /* ===== Check settings box ===== */
+    .cl-check-box {
+      border: 1.5px solid #e8eaf0;
+      border-radius: 10px;
+      padding: 0.8rem;
+      margin-bottom: 0.6rem;
+      background: #fafbfc;
+    }
+    .cl-check-box-title {
+      font-size: 0.82rem;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+    }
+    .cl-check-box-title.color-a { color: #4A90D9; }
+    .cl-check-box-title.color-b { color: #e9658b; }
+
+    /* Sep style selector row */
+    .cl-sep-style-row {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      flex-wrap: wrap;
+    }
+    .cl-sep-style-row .form-select {
+      flex: 1;
+      min-width: 100px;
+    }
   </style>
 </head>
 <body class="split-page">
@@ -336,6 +382,12 @@
     <div class="split-layout">
       <!-- ========== EDITOR ========== -->
       <div class="editor-panel" id="editorPanel">
+
+        <!-- 제목 설정 -->
+        <div class="form-group" style="padding:0.85rem 1.4rem 0;">
+          <label class="form-label">제목</label>
+          <input type="text" id="mainTitle" class="form-input" placeholder="체크리스트 제목을 입력하세요" value="" oninput="renderPreview()" />
+        </div>
 
         <!-- 배경 설정 -->
         <div class="accordion-section" id="accordionBg">
@@ -447,37 +499,71 @@
           </div>
         </div>
 
-        <!-- 체크 마크 설정 -->
+        <!-- 체크 마크 설정 (A/B 별도) -->
         <div class="accordion-section" id="accordionCheck">
           <div class="accordion-header" onclick="toggleAccordion('accordionCheck')">
             <span class="accordion-title"><i class="fa-solid fa-check-double"></i> 체크 마크 설정</span>
             <i class="fa-solid fa-chevron-down accordion-toggle-icon"></i>
           </div>
           <div class="accordion-body">
-            <div class="form-group">
-              <label class="form-label">체크 모양</label>
-              <select id="checkShape" class="form-select" onchange="onCheckShapeChange()">
-                <option value="check">✓ 체크</option>
-                <option value="circle">● 원</option>
-                <option value="star">★ 별</option>
-                <option value="heart">♥ 하트</option>
-                <option value="cross">✕ 엑스</option>
-                <option value="custom">🖼️ 커스텀 이미지</option>
-              </select>
-            </div>
-            <div class="form-group" id="customCheckGroup" style="display:none;">
-              <label class="form-label">커스텀 체크 이미지</label>
-              <div class="cl-custom-check-preview">
-                <button class="btn btn-secondary btn-sm" onclick="document.getElementById('customCheckFile').click()">
-                  <i class="fa-solid fa-upload"></i> 업로드
-                </button>
-                <img id="customCheckPreview" src="" alt="" style="display:none;" />
-                <input type="file" id="customCheckFile" accept="image/*" style="display:none" onchange="onCustomCheckUpload(event)" />
+            <!-- A check -->
+            <div class="cl-check-box">
+              <div class="cl-check-box-title color-a">A 체크 마크</div>
+              <div class="form-group">
+                <label class="form-label">모양</label>
+                <select id="checkShapeA" class="form-select" onchange="onCheckShapeChange('A')">
+                  <option value="check">✓ 체크</option>
+                  <option value="circle">● 원</option>
+                  <option value="star">★ 별</option>
+                  <option value="heart">♥ 하트</option>
+                  <option value="cross">✕ 엑스</option>
+                  <option value="custom">🖼️ 커스텀 이미지</option>
+                </select>
+              </div>
+              <div class="form-group" id="customCheckGroupA" style="display:none;">
+                <label class="form-label">커스텀 이미지</label>
+                <div class="cl-custom-check-preview">
+                  <button class="btn btn-secondary btn-sm" onclick="document.getElementById('customCheckFileA').click()">
+                    <i class="fa-solid fa-upload"></i> 업로드
+                  </button>
+                  <img id="customCheckPreviewA" src="" alt="" style="display:none;" />
+                  <input type="file" id="customCheckFileA" accept="image/*" style="display:none" onchange="onCustomCheckUpload(event,'A')" />
+                </div>
+              </div>
+              <div class="form-group">
+                <label class="form-label">색상</label>
+                <input type="color" id="checkColorA" value="#4A90D9" oninput="renderPreview()" />
               </div>
             </div>
-            <div class="form-group">
-              <label class="form-label">체크 색상</label>
-              <input type="color" id="checkColor" value="#e9658b" oninput="renderPreview()" />
+
+            <!-- B check -->
+            <div class="cl-check-box">
+              <div class="cl-check-box-title color-b">B 체크 마크</div>
+              <div class="form-group">
+                <label class="form-label">모양</label>
+                <select id="checkShapeB" class="form-select" onchange="onCheckShapeChange('B')">
+                  <option value="check">✓ 체크</option>
+                  <option value="circle">● 원</option>
+                  <option value="star">★ 별</option>
+                  <option value="heart" selected>♥ 하트</option>
+                  <option value="cross">✕ 엑스</option>
+                  <option value="custom">🖼️ 커스텀 이미지</option>
+                </select>
+              </div>
+              <div class="form-group" id="customCheckGroupB" style="display:none;">
+                <label class="form-label">커스텀 이미지</label>
+                <div class="cl-custom-check-preview">
+                  <button class="btn btn-secondary btn-sm" onclick="document.getElementById('customCheckFileB').click()">
+                    <i class="fa-solid fa-upload"></i> 업로드
+                  </button>
+                  <img id="customCheckPreviewB" src="" alt="" style="display:none;" />
+                  <input type="file" id="customCheckFileB" accept="image/*" style="display:none" onchange="onCustomCheckUpload(event,'B')" />
+                </div>
+              </div>
+              <div class="form-group">
+                <label class="form-label">색상</label>
+                <input type="color" id="checkColorB" value="#e9658b" oninput="renderPreview()" />
+              </div>
             </div>
           </div>
         </div>
@@ -489,6 +575,20 @@
             <i class="fa-solid fa-chevron-down accordion-toggle-icon"></i>
           </div>
           <div class="accordion-body">
+            <!-- Title -->
+            <div class="form-group">
+              <label class="form-label">제목</label>
+              <div class="cl-font-row">
+                <select id="fontTitle" class="form-select" onchange="renderPreview()">
+                  <option value="Pretendard">Pretendard</option>
+                  <option value="RIDIBatang">리디바탕</option>
+                  <option value="Nanum Gothic">나눔고딕</option>
+                  <option value="Nanum Myeongjo">나눔명조</option>
+                </select>
+                <input type="number" id="sizeTitle" class="form-input" value="22" min="8" max="60" oninput="renderPreview()" />
+                <input type="color" id="colorTitle" value="#222222" oninput="renderPreview()" />
+              </div>
+            </div>
             <!-- A Name -->
             <div class="form-group">
               <label class="form-label">캐릭터 A 이름</label>
@@ -559,6 +659,20 @@
                 <input type="color" id="colorBCmt" value="#666666" oninput="renderPreview()" />
               </div>
             </div>
+            <!-- Category -->
+            <div class="form-group">
+              <label class="form-label">카테고리 제목</label>
+              <div class="cl-font-row">
+                <select id="fontCat" class="form-select" onchange="renderPreview()">
+                  <option value="Pretendard">Pretendard</option>
+                  <option value="RIDIBatang">리디바탕</option>
+                  <option value="Nanum Gothic">나눔고딕</option>
+                  <option value="Nanum Myeongjo">나눔명조</option>
+                </select>
+                <input type="number" id="sizeCat" class="form-input" value="16" min="8" max="40" oninput="renderPreview()" />
+                <input type="color" id="colorCat" value="#444444" oninput="renderPreview()" />
+              </div>
+            </div>
           </div>
         </div>
 
@@ -612,6 +726,7 @@
           <div id="checklistPreview" class="cl-preview-area">
             <div class="cl-bg-layer" id="bgLayer"></div>
             <div class="cl-content" id="clContent">
+              <div class="cl-title" id="clTitle" style="display:none;"></div>
               <div class="cl-characters" id="clCharacters"></div>
               <div class="cl-items-area" id="clItemsArea"></div>
             </div>
