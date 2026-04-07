@@ -39,6 +39,10 @@
       line-height: 1.4;
     }
 
+    .cl-title.has-shadow {
+      text-shadow: 2px 2px 6px rgba(0,0,0,0.4);
+    }
+
     /* ===== Characters Top ===== */
     .cl-characters {
       display: flex;
@@ -80,6 +84,12 @@
       border-radius: 0;
     }
 
+    .cl-char-img-wrap.has-shadow { box-shadow: 0 6px 20px rgba(0,0,0,0.35); }
+    .cl-char-img-wrap.shape-diamond.has-shadow {
+      box-shadow: none;
+      filter: drop-shadow(0 6px 12px rgba(0,0,0,0.35));
+    }
+
     /* Polaroid */
     .cl-polaroid-frame {
       background: #FFFFF0;
@@ -91,11 +101,17 @@
       transition: transform 0.2s;
     }
 
+    .cl-polaroid-frame.has-shadow {
+      box-shadow: 0 8px 28px rgba(0,0,0,0.4);
+    }
+
     .cl-polaroid-frame .cl-char-img-wrap {
       width: 110px;
       height: 110px;
       border-radius: 0 !important;
       background: #e8eaf0;
+      box-shadow: none !important;
+      filter: none !important;
     }
 
     .cl-polaroid-name {
@@ -111,6 +127,12 @@
       font-weight: 600;
       text-align: center;
       word-break: break-word;
+    }
+
+    /* ===== Items Box Wrapper ===== */
+    .cl-items-box {
+      border-radius: 14px;
+      padding: 1.2rem 1rem;
     }
 
     /* ===== Checklist Items ===== */
@@ -148,10 +170,7 @@
       font-size: 1.2rem;
     }
 
-    .cl-check-cell:hover {
-      background: rgba(0,0,0,0.05);
-    }
-
+    .cl-check-cell:hover { background: rgba(0,0,0,0.05); }
     .cl-check-cell.checked { opacity: 1; }
     .cl-check-cell.unchecked { opacity: 1; }
 
@@ -188,10 +207,7 @@
     .cl-comment-b { text-align: right; }
 
     /* Separators */
-    .cl-separator {
-      border: none;
-      margin: 0.8rem 0;
-    }
+    .cl-separator { border: none; margin: 0.8rem 0; }
     .cl-separator.sep-solid { border-top: 1.5px solid #ccc; }
     .cl-separator.sep-dashed { border-top: 1.5px dashed #ccc; }
     .cl-separator.sep-dotted { border-top: 2px dotted #ccc; }
@@ -256,7 +272,6 @@
       gap: 0.4rem;
       align-items: end;
     }
-
     .cl-font-row .form-group { margin-bottom: 0; }
 
     /* ===== Polaroid Tilt Controls ===== */
@@ -359,6 +374,26 @@
       flex: 1;
       min-width: 100px;
     }
+
+    /* Box color/opacity row */
+    .cl-box-row {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+    }
+    .cl-box-row label {
+      font-size: 0.8rem;
+      font-weight: 500;
+      color: #555;
+      white-space: nowrap;
+    }
+    .cl-box-row input[type="range"] { flex: 1; }
+    .cl-opacity-val {
+      font-size: 0.78rem;
+      color: #999;
+      min-width: 32px;
+      text-align: right;
+    }
   </style>
 </head>
 <body class="split-page">
@@ -383,7 +418,7 @@
       <!-- ========== EDITOR ========== -->
       <div class="editor-panel" id="editorPanel">
 
-        <!-- 제목 설정 -->
+        <!-- 제목 -->
         <div class="form-group" style="padding:0.85rem 1.4rem 0;">
           <label class="form-label">제목</label>
           <input type="text" id="mainTitle" class="form-input" placeholder="체크리스트 제목을 입력하세요" value="" oninput="renderPreview()" />
@@ -402,7 +437,7 @@
             </div>
             <div class="form-group">
               <label class="form-label">배경 이미지</label>
-              <div style="display:flex; align-items:center; gap:0.5rem;">
+              <div style="display:flex;align-items:center;gap:0.5rem;">
                 <button class="btn btn-secondary btn-sm" onclick="document.getElementById('bgImgFile').click()">
                   <i class="fa-solid fa-upload"></i> 업로드
                 </button>
@@ -417,6 +452,18 @@
               <div class="cl-blur-row">
                 <input type="range" id="bgBlur" min="0" max="20" value="0" step="1" oninput="onBlurChange()" />
                 <span class="cl-blur-val" id="bgBlurVal">0px</span>
+              </div>
+            </div>
+            <!-- 항목 박스 설정 -->
+            <div class="form-group">
+              <label class="form-label">항목 영역 박스 색상</label>
+              <input type="color" id="boxColor" value="#ffffff" oninput="renderPreview()" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">항목 영역 박스 투명도</label>
+              <div class="cl-box-row">
+                <input type="range" id="boxOpacity" min="0" max="100" value="60" step="5" oninput="onBoxOpacityChange()" />
+                <span class="cl-opacity-val" id="boxOpacityVal">60%</span>
               </div>
             </div>
           </div>
@@ -440,6 +487,16 @@
               </select>
             </div>
 
+            <div class="form-group">
+              <div class="toggle-row">
+                <span class="toggle-label">이미지 그림자</span>
+                <label class="toggle-switch">
+                  <input type="checkbox" id="imgShadow" onchange="renderPreview()" />
+                  <span class="toggle-slider"></span>
+                </label>
+              </div>
+            </div>
+
             <div id="polaroidTiltSection" style="display:none;">
               <div class="cl-tilt-controls">
                 <div class="cl-tilt-row">
@@ -455,7 +512,6 @@
               </div>
             </div>
 
-            <!-- Character A -->
             <div class="cl-char-editor">
               <div class="cl-char-editor-title">캐릭터 A</div>
               <div class="form-group">
@@ -476,7 +532,6 @@
               </div>
             </div>
 
-            <!-- Character B -->
             <div class="cl-char-editor">
               <div class="cl-char-editor-title">캐릭터 B</div>
               <div class="form-group">
@@ -506,7 +561,6 @@
             <i class="fa-solid fa-chevron-down accordion-toggle-icon"></i>
           </div>
           <div class="accordion-body">
-            <!-- A check -->
             <div class="cl-check-box">
               <div class="cl-check-box-title color-a">A 체크 마크</div>
               <div class="form-group">
@@ -536,7 +590,6 @@
               </div>
             </div>
 
-            <!-- B check -->
             <div class="cl-check-box">
               <div class="cl-check-box-title color-b">B 체크 마크</div>
               <div class="form-group">
@@ -587,6 +640,13 @@
                 </select>
                 <input type="number" id="sizeTitle" class="form-input" value="22" min="8" max="60" oninput="renderPreview()" />
                 <input type="color" id="colorTitle" value="#222222" oninput="renderPreview()" />
+              </div>
+              <div class="toggle-row" style="margin-top:0.4rem;">
+                <span class="toggle-label" style="font-size:0.8rem;">텍스트 그림자</span>
+                <label class="toggle-switch">
+                  <input type="checkbox" id="titleShadow" onchange="renderPreview()" />
+                  <span class="toggle-slider"></span>
+                </label>
               </div>
             </div>
             <!-- A Name -->
@@ -728,7 +788,9 @@
             <div class="cl-content" id="clContent">
               <div class="cl-title" id="clTitle" style="display:none;"></div>
               <div class="cl-characters" id="clCharacters"></div>
-              <div class="cl-items-area" id="clItemsArea"></div>
+              <div class="cl-items-box" id="clItemsBox">
+                <div class="cl-items-area" id="clItemsArea"></div>
+              </div>
             </div>
           </div>
         </div>
