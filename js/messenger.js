@@ -10,10 +10,11 @@ const state = {
 };
 
 const AVATAR_COLORS = ['#4A90D9', '#e9658b', '#f5a623', '#7ed321', '#9b59b6', '#1abc9c'];
-const collapsedChars = new Set([1, 2]); // 기본 캐릭터는 접힌 상태
+const collapsedChars = new Set([1, 2]);
 
 // ===================== INIT =====================
 document.addEventListener('DOMContentLoaded', () => {
+  populateFontSelect('fontSelect', 'Pretendard');
   renderCharacters();
   renderMessages();
   renderPreview();
@@ -49,7 +50,6 @@ function addCharacter() {
   }
   const id = state.nextCharId++;
   state.characters.push({ id, name: `캐릭터 ${id}`, imgUrl: '', side: 'left' });
-  // 새로 추가된 캐릭터는 펼침 상태 (collapsedChars에 추가하지 않음)
   renderCharacters();
   renderPreview();
   updateCharBtn();
@@ -87,7 +87,6 @@ function updateCharInput(id, field, value) {
   if (char) {
     char[field] = value;
     renderPreview();
-    // 이름 변경시 헤더에도 반영되도록 재렌더링
     if (field === 'name') renderCharacters();
     refreshMessageSpeakers();
   }
@@ -331,16 +330,6 @@ function getSelectedFont() {
   return sel ? sel.value : 'Pretendard';
 }
 
-function getFontStack(font) {
-  const stacks = {
-    'Pretendard': "'Pretendard', 'Noto Sans KR', -apple-system, BlinkMacSystemFont, system-ui, sans-serif",
-    'RIDIBatang': "'RIDIBatang', 'Noto Sans KR', serif",
-    'Nanum Gothic': "'Nanum Gothic', 'Noto Sans KR', sans-serif",
-    'Nanum Myeongjo': "'Nanum Myeongjo', 'Noto Sans KR', serif",
-  };
-  return stacks[font] || stacks['Pretendard'];
-}
-
 function applyCustomThemeStyles() {
   const bg = document.getElementById('customBg').value;
   const leftBubble = document.getElementById('customLeftBubble').value;
@@ -420,7 +409,7 @@ function buildMessageHTML(msg) {
 function copyHTML() {
   const preview = document.getElementById('messengerPreview');
   const theme = document.getElementById('themeSelect').value;
-  const html = `<!DOCTYPE html>\n<html lang="ko">\n<head>\n<meta charset="UTF-8"/>\n<meta name="viewport" content="width=device-width,initial-scale=1.0"/>\n<title>메신저 대화</title>\n<style>\nbody{font-family:'Noto Sans KR',-apple-system,sans-serif;background:#f5f7fa;display:flex;justify-content:center;padding:2rem;}\n${getThemeCSS(theme)}\n</style>\n</head>\n<body>\n${preview.outerHTML}\n</body>\n</html>`;
+  const html = `<!DOCTYPE html>\n<html lang="ko">\n<head>\n<meta charset="UTF-8"/>\n<meta name="viewport" content="width=device-width,initial-scale=1.0"/>\n<title>메신저 대화</title>\n<style>\n${getThemeCSS(theme)}\n</style>\n</head>\n<body style="background:#f5f7fa;display:flex;justify-content:center;padding:2rem;margin:0;">\n${preview.outerHTML}\n</body>\n</html>`;
   navigator.clipboard.writeText(html).then(() => alert('HTML이 클립보드에 복사되었습니다!'))
     .catch(() => { const ta = document.createElement('textarea'); ta.value = html; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta); alert('HTML이 클립보드에 복사되었습니다!'); });
 }
@@ -467,7 +456,7 @@ function loadJSON(event) {
       if (data.nextMsgId) state.nextMsgId = data.nextMsgId;
       if (data.roomName) document.getElementById('roomName').value = data.roomName;
       if (data.theme) document.getElementById('themeSelect').value = data.theme;
-      if (data.font) document.getElementById('fontSelect').value = data.font;
+      if (data.font) populateFontSelect('fontSelect', data.font);
       if (data.customTheme) {
         document.getElementById('customBg').value = data.customTheme.bg || '#f0f2f5';
         document.getElementById('customLeftBubble').value = data.customTheme.leftBubble || '#e8f4fe';
@@ -498,14 +487,14 @@ function esc(str) { return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt
 function escAttr(str) { return String(str).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
 
 function getThemeCSS(theme) {
-  const base = `.messenger-preview{border-radius:16px;overflow:hidden;min-height:300px;display:flex;flex-direction:column;}.messenger-header{padding:1rem 1.2rem;}.messenger-header .room-name{font-size:1rem;font-weight:700;}.messenger-body{flex:1;padding:1rem;display:flex;flex-direction:column;gap:0.6rem;}.bubble-row{display:flex;align-items:flex-end;gap:0.5rem;}.bubble-row.right{flex-direction:row-reverse;}.avatar-circle{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.8rem;font-weight:700;color:#fff;}.bubble-content{display:flex;flex-direction:column;max-width:70%;}.bubble-row.right .bubble-content{align-items:flex-end;}.bubble-name{font-size:0.72rem;font-weight:600;margin-bottom:0.2rem;}.bubble-text{padding:0.5rem 0.85rem;border-radius:18px;font-size:0.9rem;line-height:1.5;word-break:break-word;white-space:pre-wrap;}.scene-block{display:flex;align-items:center;gap:0.7rem;padding:0.4rem 0.6rem;}.scene-block::before,.scene-block::after{content:'';flex:1;height:1px;opacity:0.3;}.scene-text{font-size:0.8rem;font-weight:600;white-space:nowrap;opacity:0.75;}`;
+  const base = `.messenger-preview{border-radius:16px;overflow:hidden;min-height:300px;display:flex;flex-direction:column;}.messenger-header{padding:1rem 1.2rem;}.messenger-header .room-name{font-size:1rem;font-weight:700;}.messenger-body{flex:1;padding:1rem;display:flex;flex-direction:column;gap:0.6rem;}.bubble-row{display:flex;align-items:flex-end;gap:0.5rem;}.bubble-row.right{flex-direction:row-reverse;}.avatar-circle{width:36px;height:36px;border-radius:50%;object-fit:cover;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:0.8rem;font-weight:700;color:#fff;}.bubble-content{display:flex;flex-direction:column;max-width:70%;}.bubble-row.right .bubble-content{align-items:flex-end;}.bubble-name{font-size:0.72rem;font-weight:600;margin-bottom:0.2rem;opacity:0.7;}.bubble-text{padding:0.5rem 0.85rem;border-radius:18px;font-size:0.9rem;line-height:1.5;word-break:break-word;white-space:pre-wrap;}.scene-block{display:flex;align-items:center;gap:0.7rem;padding:0.4rem 0.6rem;}.scene-block::before,.scene-block::after{content:'';flex:1;height:1px;opacity:0.3;}.scene-text{font-size:0.8rem;font-weight:600;white-space:nowrap;opacity:0.75;}`;
   const themes = {
     kakao: base + `.messenger-preview{background:#B2C7D9;}.messenger-header{background:#a8bfcf;}.messenger-header .room-name{color:#fff;}.bubble-row.left .bubble-text{background:#fff;color:#222;border-radius:0 18px 18px 18px;}.bubble-row.right .bubble-text{background:#FEE500;color:#222;border-radius:18px 0 18px 18px;}.bubble-name{color:#333;}.scene-block::before,.scene-block::after{background:#666;}.scene-text{color:#444;}`,
     line: base + `.messenger-preview{background:#f5f5f5;}.messenger-header{background:#06C755;}.messenger-header .room-name{color:#fff;}.bubble-row.left .bubble-text{background:#fff;color:#222;border-radius:0 18px 18px 18px;}.bubble-row.right .bubble-text{background:#06C755;color:#fff;border-radius:18px 0 18px 18px;}.bubble-name{color:#555;}.scene-block::before,.scene-block::after{background:#999;}.scene-text{color:#666;}`,
     twitter: base + `.messenger-preview{background:#fff;}.messenger-header{background:#fff;border-bottom:1px solid #e7e7e7;}.messenger-header .room-name{color:#0f1419;}.bubble-row.left .bubble-text{background:#eff3f4;color:#0f1419;border-radius:4px 18px 18px 18px;}.bubble-row.right .bubble-text{background:#1D9BF0;color:#fff;border-radius:18px 4px 18px 18px;}.bubble-name{color:#536471;}.scene-block::before,.scene-block::after{background:#cfd9de;}.scene-text{color:#536471;}`,
     light: base + `.messenger-preview{background:#f8f9fb;}.messenger-header{background:#fff;border-bottom:1px solid #e8eaf0;}.messenger-header .room-name{color:#333;}.bubble-row.left .bubble-text{background:#e8f4fe;color:#2c3e50;border-radius:4px 18px 18px 18px;}.bubble-row.right .bubble-text{background:#c8e6ff;color:#1a2c3d;border-radius:18px 4px 18px 18px;}.bubble-name{color:#666;}.scene-block::before,.scene-block::after{background:#bbb;}.scene-text{color:#888;}`,
     dark: base + `.messenger-preview{background:#1a1a2e;}.messenger-header{background:#16213e;}.messenger-header .room-name{color:#e0e0e0;}.bubble-row.left .bubble-text{background:#2a2a4a;color:#ddd;border-radius:4px 18px 18px 18px;}.bubble-row.right .bubble-text{background:#0f3460;color:#e0e0e0;border-radius:18px 4px 18px 18px;}.bubble-name{color:#aaa;}.scene-block::before,.scene-block::after{background:#555;}.scene-text{color:#aaa;}`,
-    custom: base + `.messenger-preview{background:#f0f2f5;}.messenger-header{background:#4A90D9;}.messenger-header .room-name{color:#fff;}.bubble-name{opacity:0.7;}.bubble-row.left .bubble-text{background:#e8f4fe;color:#222;border-radius:0 18px 18px 18px;}.bubble-row.right .bubble-text{background:#c8e6ff;color:#1a2c3d;border-radius:18px 0 18px 18px;}.scene-block::before,.scene-block::after{background:currentColor;}.scene-text{opacity:0.75;}`,
+    custom: base + `.messenger-preview{background:#f0f2f5;}.messenger-header{background:#4A90D9;}.messenger-header .room-name{color:#fff;}.bubble-name{opacity:0.7;}.bubble-row.left .bubble-text{border-radius:0 18px 18px 18px;}.bubble-row.right .bubble-text{border-radius:18px 0 18px 18px;}.scene-block::before,.scene-block::after{background:currentColor;opacity:0.3;}.scene-text{opacity:0.75;}`,
   };
   return themes[theme] || themes.kakao;
 }
