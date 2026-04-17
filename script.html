@@ -316,8 +316,7 @@
           </div>
         </div>
 
-        <!-- 여백 & 위치 -->
-        <div class="accordion-section" id="ac        <!-- 여백 & 위치 -->
+                <!-- 여백 & 위치 -->
         <div class="accordion-section" id="accordionSpacing">
           <div class="accordion-header" onclick="toggleAccordion('accordionSpacing')">
             <span class="accordion-title"><i class="fa-solid fa-arrows-alt"></i> 여백 & 위치</span>
@@ -347,28 +346,14 @@
             </div>
 
             <hr style="border:none;border-top:1px solid #f0f2f5;margin:0.8rem 0;" />
-            <div class="text-muted" style="margin-bottom:0.5rem;">지문(나레이션) 들여쓰기</div>
             <div class="slider-row">
-              <label>좌</label>
+              <label>지문 들여쓰기</label>
               <input type="range" id="narrationIndentLeft" min="0" max="120" value="0" oninput="renderPreview(); this.parentNode.querySelector('.slider-val').textContent=this.value+'px'" />
               <span class="slider-val">0px</span>
             </div>
             <div class="slider-row">
-              <label>우</label>
-              <input type="range" id="narrationIndentRight" min="0" max="120" value="0" oninput="renderPreview(); this.parentNode.querySelector('.slider-val').textContent=this.value+'px'" />
-              <span class="slider-val">0px</span>
-            </div>
-
-            <hr style="border:none;border-top:1px solid #f0f2f5;margin:0.8rem 0;" />
-            <div class="text-muted" style="margin-bottom:0.5rem;">대사 블록 들여쓰기</div>
-            <div class="slider-row">
-              <label>좌</label>
+              <label>대사 들여쓰기</label>
               <input type="range" id="dialogueIndentLeft" min="0" max="120" value="0" oninput="renderPreview(); this.parentNode.querySelector('.slider-val').textContent=this.value+'px'" />
-              <span class="slider-val">0px</span>
-            </div>
-            <div class="slider-row">
-              <label>우</label>
-              <input type="range" id="dialogueIndentRight" min="0" max="120" value="0" oninput="renderPreview(); this.parentNode.querySelector('.slider-val').textContent=this.value+'px'" />
               <span class="slider-val">0px</span>
             </div>
 
