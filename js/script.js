@@ -40,14 +40,14 @@ function setRatio(ratio, btn) {
   renderPreview();
 }
 
-function getRatioStyle() {
+function applyRatio() {
   const canvas = document.getElementById('scriptCanvas');
   if (currentRatio === 'free') {
     canvas.style.aspectRatio = '';
-    return;
+  } else {
+    const [w, h] = currentRatio.split(':').map(Number);
+    canvas.style.aspectRatio = `${w}/${h}`;
   }
-  const [w, h] = currentRatio.split(':').map(Number);
-  canvas.style.aspectRatio = `${w}/${h}`;
 }
 
 // ─── Background Type (Layout 2) ───
@@ -74,16 +74,14 @@ function handleImg(slot, e) {
 
 function removeImg(slot) {
   images[slot] = null;
-  if (slot === 'top') {
-    document.getElementById('topImgBox').innerHTML = '<span id="topImgLabel"><i class="fa-solid fa-upload"></i> 클릭하여 업로드</span>';
-    document.getElementById('topImgInput').value = '';
-  } else if (slot === 'bottom') {
-    document.getElementById('bottomImgBox').innerHTML = '<span id="bottomImgLabel"><i class="fa-solid fa-upload"></i> 클릭하여 업로드</span>';
-    document.getElementById('bottomImgInput').value = '';
-  } else {
-    document.getElementById('bgImgBox').innerHTML = '<span id="bgImgLabel"><i class="fa-solid fa-upload"></i> 클릭하여 업로드</span>';
-    document.getElementById('bgImgInput').value = '';
-  }
+  const map = {
+    top:    { box: 'topImgBox',    label: 'topImgLabel',    input: 'topImgInput' },
+    bottom: { box: 'bottomImgBox', label: 'bottomImgLabel', input: 'bottomImgInput' },
+    bg:     { box: 'bgImgBox',     label: 'bgImgLabel',     input: 'bgImgInput' }
+  };
+  const m = map[slot];
+  document.getElementById(m.box).innerHTML = `<span id="${m.label}"><i class="fa-solid fa-upload"></i> 클릭하여 업로드</span>`;
+  document.getElementById(m.input).value = '';
   renderPreview();
 }
 
@@ -114,27 +112,35 @@ function parseFormatting(text) {
   return html;
 }
 
-// ─── Script Parsing (★ 연속 동일 이름 병합 + 들여쓰기 이어붙이기) ───
+// ─── Colon Finder (반각 : 전각 ： 모두 지원) ───
+function findColonIndex(text) {
+  const c1 = text.indexOf(':');
+  const c2 = text.indexOf('\uff1a'); // ：
+  if (c1 >= 0 && c2 >= 0) return Math.min(c1, c2);
+  if (c1 >= 0) return c1;
+  if (c2 >= 0) return c2;
+  return -1;
+}
+
+// ─── Script Parsing (연속 동일 이름 병합 + 들여쓰기 이어붙이기) ───
 function parseScript(rawText) {
   const lines = rawText.split('\n');
-  const tokens = [];  // 중간 토큰
+  const tokens = [];
 
   for (let i = 0; i < lines.length; i++) {
     const raw = lines[i];
     const trimmed = raw.trim();
 
-    // 빈 줄 → 문단 구분
     if (trimmed === '') {
       tokens.push({ type: 'gap' });
       continue;
     }
 
-    // 들여쓰기 줄 감지: 줄 앞에 공백이 2개 이상 있고 콜론이 없는 경우 → 이전 대사의 연속
+    // 들여쓰기 줄: 앞에 공백 2개 이상 + 콜론 없음 → 이전 대사 연속
     const leadingSpaces = raw.match(/^(\s*)/)[1].length;
     const hasColon = findColonIndex(trimmed) > 0;
 
     if (leadingSpaces >= 2 && !hasColon) {
-      // 이전 토큰이 대사(line)면 이어붙이기
       if (tokens.length > 0 && tokens[tokens.length - 1].type === 'line') {
         tokens[tokens.length - 1].dialogues.push(trimmed);
         continue;
@@ -152,17 +158,15 @@ function parseScript(rawText) {
       }
     }
 
-    // 그 외 → 지문
     tokens.push({ type: 'narration', text: trimmed });
   }
 
-  // ★ 2차 패스: 연속 동일 이름 병합
+  // 2차: 연속 동일 이름 병합
   const merged = [];
   for (const token of tokens) {
     if (token.type === 'line' && merged.length > 0) {
       const prev = merged[merged.length - 1];
       if (prev.type === 'line' && prev.name === token.name) {
-        // 같은 이름 연속 → 대사만 추가
         prev.dialogues.push(...token.dialogues);
         continue;
       }
@@ -173,17 +177,7 @@ function parseScript(rawText) {
   return merged;
 }
 
-// 콜론 찾기 (반각 : 와 전각 ： 모두 지원)
-function findColonIndex(text) {
-  const c1 = text.indexOf(':');
-  const c2 = text.indexOf('：');
-  if (c1 >= 0 && c2 >= 0) return Math.min(c1, c2);
-  if (c1 >= 0) return c1;
-  if (c2 >= 0) return c2;
-  return -1;
-}
-
-// ─── Render ───
+// ─── Render Preview ───
 function renderPreview() {
   const canvas = document.getElementById('scriptCanvas');
   const body = document.getElementById('scriptBody');
@@ -192,10 +186,9 @@ function renderPreview() {
   const overlay = document.getElementById('layout2Overlay');
   const inner = document.getElementById('scriptInner');
 
-  // Ratio
-  getRatioStyle();
+  applyRatio();
 
-  // Values
+  // 값 읽기
   const padTop = document.getElementById('padTop').value;
   const padBottom = document.getElementById('padBottom').value;
   const padLeft = document.getElementById('padLeft').value;
@@ -205,20 +198,26 @@ function renderPreview() {
   const lineGap = document.getElementById('lineGap').value;
   const fontSize = document.getElementById('fontSize').value;
   const lineHeight = (document.getElementById('lineHeight').value / 100).toFixed(2);
-  const fontFamily = document.getElementById('fontSelect').value;
   const nameColor = document.getElementById('nameColor').value;
   const dialogueColor = document.getElementById('dialogueColor').value;
   const narrationColor = document.getElementById('narrationColor').value;
   const canvasBg = document.getElementById('canvasBg').value;
 
-  // Layout
+  // ★ fonts.js의 getFontStack() 사용
+  const fontValue = document.getElementById('fontSelect').value;
+  const fontFamily = getFontStack(fontValue);
+
+  // ─── 레이아웃 분기 ───
   canvas.classList.toggle('layout-2', currentLayout === 2);
 
   if (currentLayout === 1) {
+    // 레이아웃 1: 캔버스 전체가 배경색, 이미지는 상·하단
     canvas.style.background = canvasBg;
     canvas.style.backgroundImage = '';
     overlay.style.display = 'none';
-    inner.style.background = '';  // 레이아웃1은 투명
+    inner.style.background = '';
+    inner.style.margin = '0';
+
     if (images.top) {
       topImg.src = images.top;
       topImg.style.display = 'block';
@@ -234,43 +233,48 @@ function renderPreview() {
       bottomImg.style.display = 'none';
     }
   } else {
-    // 레이아웃 2
+    // ★ 레이아웃 2: 캔버스 = 배경색/이미지, 안쪽에 흰색 본문 박스
     topImg.style.display = 'none';
     bottomImg.style.display = 'none';
 
+    // 배경
     const bgType = document.getElementById('bgType').value;
     if (bgType === 'color') {
       canvas.style.background = document.getElementById('bgColor').value;
       canvas.style.backgroundImage = '';
     } else if (bgType === 'image' && images.bg) {
       canvas.style.backgroundImage = `url(${images.bg})`;
+      canvas.style.backgroundSize = 'cover';
+      canvas.style.backgroundPosition = 'center';
       canvas.style.backgroundColor = '';
     } else {
       canvas.style.background = document.getElementById('bgColor').value;
     }
 
     // 오버레이
-    const opVal = document.getElementById('bgOverlayOpacity').value;
-    const ovColor = document.getElementById('bgOverlayColor').value;
-    if (parseInt(opVal) > 0) {
+    const opVal = parseInt(document.getElementById('bgOverlayOpacity').value);
+    if (opVal > 0) {
       overlay.style.display = 'block';
-      overlay.style.background = ovColor;
+      overlay.style.background = document.getElementById('bgOverlayColor').value;
       overlay.style.opacity = (opVal / 100).toFixed(2);
     } else {
       overlay.style.display = 'none';
     }
 
-    // ★ 본문 영역 흰색 배경 (레이아웃 2에서)
+    // ★ 핵심: 본문 영역에 흰색 배경 + 바깥 여백(margin)
+    const outerY = document.getElementById('outerPadY').value;
+    const outerX = document.getElementById('outerPadX').value;
     inner.style.background = '#fff';
+    inner.style.margin = `${outerY}px ${outerX}px`;
   }
 
-  // Script inner padding
+  // 본문 내부 padding & 폰트
   inner.style.padding = `${padTop}px ${padRight}px ${padBottom}px ${padLeft}px`;
   inner.style.fontFamily = fontFamily;
   inner.style.fontSize = fontSize + 'px';
   inner.style.lineHeight = lineHeight;
 
-  // Parse and render
+  // 파싱 & 렌더
   const raw = document.getElementById('scriptInput').value;
   if (!raw.trim()) {
     body.innerHTML = '<div class="empty-state"><i class="fa-solid fa-pen-nib"></i><p>대본을 입력하면 여기에 표시됩니다</p></div>';
@@ -286,15 +290,13 @@ function renderPreview() {
     } else if (item.type === 'narration') {
       html += `<div class="script-narration" style="color:${narrationColor};margin-bottom:${lineGap}px;">${parseFormatting(item.text)}</div>`;
     } else {
-      // ★ 이름 한 번 + 대사 여러 줄
       html += `<div class="script-block" style="margin-bottom:${lineGap}px;">`;
       html += `<span class="script-name" style="width:${nameWidth}px;min-width:${nameWidth}px;color:${nameColor};margin-right:${nameGap}px;">${parseFormatting(item.name)}</span>`;
       html += `<div class="script-dialogue-group">`;
       for (const d of item.dialogues) {
         html += `<div class="script-dialogue" style="color:${dialogueColor};">${parseFormatting(d)}</div>`;
       }
-      html += `</div>`;
-      html += `</div>`;
+      html += `</div></div>`;
     }
   }
 
@@ -317,7 +319,7 @@ function saveImage() {
   });
 }
 
-// ─── Save / Load JSON ───
+// ─── Save JSON ───
 function saveJSON() {
   const data = {
     layout: currentLayout,
@@ -333,7 +335,7 @@ function saveJSON() {
       lineGap: document.getElementById('lineGap').value,
       fontSize: document.getElementById('fontSize').value,
       lineHeight: document.getElementById('lineHeight').value,
-      fontFamily: document.getElementById('fontSelect').value,
+      fontValue: document.getElementById('fontSelect').value,
       nameColor: document.getElementById('nameColor').value,
       dialogueColor: document.getElementById('dialogueColor').value,
       narrationColor: document.getElementById('narrationColor').value,
@@ -341,7 +343,9 @@ function saveJSON() {
       bgType: document.getElementById('bgType').value,
       bgColor: document.getElementById('bgColor').value,
       bgOverlayOpacity: document.getElementById('bgOverlayOpacity').value,
-      bgOverlayColor: document.getElementById('bgOverlayColor').value
+      bgOverlayColor: document.getElementById('bgOverlayColor').value,
+      outerPadY: document.getElementById('outerPadY').value,
+      outerPadX: document.getElementById('outerPadX').value
     }
   };
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
@@ -351,6 +355,7 @@ function saveJSON() {
   link.click();
 }
 
+// ─── Load JSON ───
 function loadJSON(e) {
   const file = e.target.files[0];
   if (!file) return;
@@ -360,7 +365,7 @@ function loadJSON(e) {
       const data = JSON.parse(ev.target.result);
       document.getElementById('scriptInput').value = data.script || '';
       const s = data.settings || {};
-      const setVal = (id, val) => { if (val !== undefined) document.getElementById(id).value = val; };
+      const setVal = (id, val) => { if (val !== undefined && document.getElementById(id)) document.getElementById(id).value = val; };
       setVal('padTop', s.padTop);
       setVal('padBottom', s.padBottom);
       setVal('padLeft', s.padLeft);
@@ -378,7 +383,9 @@ function loadJSON(e) {
       setVal('bgColor', s.bgColor);
       setVal('bgOverlayOpacity', s.bgOverlayOpacity);
       setVal('bgOverlayColor', s.bgOverlayColor);
-      if (s.fontFamily) document.getElementById('fontSelect').value = s.fontFamily;
+      setVal('outerPadY', s.outerPadY);
+      setVal('outerPadX', s.outerPadX);
+      if (s.fontValue) document.getElementById('fontSelect').value = s.fontValue;
 
       if (data.ratio) {
         currentRatio = data.ratio;
@@ -394,6 +401,7 @@ function loadJSON(e) {
         setLayout(data.layout, btns[data.layout - 1]);
       }
 
+      // 슬라이더 표시값 갱신
       document.querySelectorAll('.slider-row').forEach(row => {
         const inp = row.querySelector('input[type="range"]');
         const val = row.querySelector('.slider-val');
@@ -415,5 +423,7 @@ function loadJSON(e) {
 
 // ─── Init ───
 document.addEventListener('DOMContentLoaded', () => {
+  // ★ fonts.js의 populateFontSelect 사용
+  populateFontSelect('fontSelect', 'Pretendard');
   renderPreview();
 });
