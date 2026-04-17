@@ -24,6 +24,10 @@
       position: relative;
       z-index: 1;
     }
+    /* ★ 레이아웃2: 본문 영역 흰색 배경 */
+    .script-canvas.layout-2 .script-inner {
+      background: #fff;
+    }
     .layout-2-overlay {
       display: none;
     }
@@ -41,7 +45,8 @@
     .script-body {
       width: 100%;
     }
-    .script-line {
+    /* 대사 블록 (이름 + 대사 묶음) */
+    .script-block {
       display: flex;
       align-items: baseline;
     }
@@ -50,10 +55,13 @@
       font-weight: 700;
       text-align: left;
       word-break: keep-all;
+      align-self: flex-start;
     }
-    .script-dialogue {
+    .script-dialogue-group {
       flex: 1;
       min-width: 0;
+    }
+    .script-dialogue {
       word-break: break-word;
     }
     .script-narration {
@@ -293,7 +301,7 @@
               </div>
               <div id="bgColorOption">
                 <div class="color-row">
-                  <label>배경 ���상</label>
+                  <label>배경 색상</label>
                   <input type="color" id="bgColor" value="#ffffff" oninput="renderPreview()" />
                 </div>
               </div>
@@ -424,7 +432,7 @@
           <div class="accordion-body">
             <div class="text-muted" style="margin-bottom:0.5rem;">
               <code>이름 : 대사</code> 형식으로 입력하세요.<br>
-              <code>:</code> 없는 줄은 지문(나레이션)으로 처리됩니��.<br>
+              <code>:</code> 없는 줄은 지문(나레이션)으로 처리됩니다.<br>
               빈 줄은 문단 구분선이 됩니다.<br>
               서식: <code>**볼드**</code> <code>*이탤릭*</code> <code>~~취소선~~</code> <code>__밑줄__</code>
             </div>
