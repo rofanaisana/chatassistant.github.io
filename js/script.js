@@ -112,17 +112,17 @@ function parseFormatting(text) {
   return html;
 }
 
-// ─── Colon Finder (반각 : 전각 ： 모두 지원) ───
+// ─── Colon Finder ───
 function findColonIndex(text) {
   const c1 = text.indexOf(':');
-  const c2 = text.indexOf('\uff1a'); // ：
+  const c2 = text.indexOf('\uff1a');
   if (c1 >= 0 && c2 >= 0) return Math.min(c1, c2);
   if (c1 >= 0) return c1;
   if (c2 >= 0) return c2;
   return -1;
 }
 
-// ─── Script Parsing (연속 동일 이름 병합 + 들여쓰기 이어붙이기) ───
+// ─── Script Parsing ───
 function parseScript(rawText) {
   const lines = rawText.split('\n');
   const tokens = [];
@@ -136,7 +136,6 @@ function parseScript(rawText) {
       continue;
     }
 
-    // 들여쓰기 줄: 앞에 공백 2개 이상 + 콜론 없음 → 이전 대사 연속
     const leadingSpaces = raw.match(/^(\s*)/)[1].length;
     const hasColon = findColonIndex(trimmed) > 0;
 
@@ -147,7 +146,6 @@ function parseScript(rawText) {
       }
     }
 
-    // 콜론 기준 분리
     const colonIdx = findColonIndex(trimmed);
     if (colonIdx > 0 && colonIdx < trimmed.length - 1) {
       const name = trimmed.substring(0, colonIdx).trim();
@@ -161,7 +159,6 @@ function parseScript(rawText) {
     tokens.push({ type: 'narration', text: trimmed });
   }
 
-  // 2차: 연속 동일 이름 병합
   const merged = [];
   for (const token of tokens) {
     if (token.type === 'line' && merged.length > 0) {
@@ -203,7 +200,13 @@ function renderPreview() {
   const narrationColor = document.getElementById('narrationColor').value;
   const canvasBg = document.getElementById('canvasBg').value;
 
-  // ★ fonts.js의 getFontStack() 사용
+  // ★ 들여쓰기 값
+  const narIndentL = document.getElementById('narrationIndentLeft').value;
+  const narIndentR = document.getElementById('narrationIndentRight').value;
+  const dlgIndentL = document.getElementById('dialogueIndentLeft').value;
+  const dlgIndentR = document.getElementById('dialogueIndentRight').value;
+
+  // 폰트
   const fontValue = document.getElementById('fontSelect').value;
   const fontFamily = getFontStack(fontValue);
 
@@ -211,7 +214,6 @@ function renderPreview() {
   canvas.classList.toggle('layout-2', currentLayout === 2);
 
   if (currentLayout === 1) {
-    // 레이아웃 1: 캔버스 전체가 배경색, 이미지는 상·하단
     canvas.style.background = canvasBg;
     canvas.style.backgroundImage = '';
     overlay.style.display = 'none';
@@ -233,11 +235,9 @@ function renderPreview() {
       bottomImg.style.display = 'none';
     }
   } else {
-    // ★ 레이아웃 2: 캔버스 = 배경색/이미지, 안쪽에 흰색 본문 박스
     topImg.style.display = 'none';
     bottomImg.style.display = 'none';
 
-    // 배경
     const bgType = document.getElementById('bgType').value;
     if (bgType === 'color') {
       canvas.style.background = document.getElementById('bgColor').value;
@@ -251,7 +251,6 @@ function renderPreview() {
       canvas.style.background = document.getElementById('bgColor').value;
     }
 
-    // 오버레이
     const opVal = parseInt(document.getElementById('bgOverlayOpacity').value);
     if (opVal > 0) {
       overlay.style.display = 'block';
@@ -261,14 +260,12 @@ function renderPreview() {
       overlay.style.display = 'none';
     }
 
-    // ★ 핵심: 본문 영역에 흰색 배경 + 바깥 여백(margin)
     const outerY = document.getElementById('outerPadY').value;
     const outerX = document.getElementById('outerPadX').value;
     inner.style.background = '#fff';
     inner.style.margin = `${outerY}px ${outerX}px`;
   }
 
-  // 본문 내부 padding & 폰트
   inner.style.padding = `${padTop}px ${padRight}px ${padBottom}px ${padLeft}px`;
   inner.style.fontFamily = fontFamily;
   inner.style.fontSize = fontSize + 'px';
@@ -288,9 +285,11 @@ function renderPreview() {
     if (item.type === 'gap') {
       html += `<div class="line-gap" style="height:${Math.max(parseInt(lineGap) * 3, 12)}px;"></div>`;
     } else if (item.type === 'narration') {
-      html += `<div class="script-narration" style="color:${narrationColor};margin-bottom:${lineGap}px;">${parseFormatting(item.text)}</div>`;
+      // ★ 지문 들여쓰기
+      html += `<div class="script-narration" style="color:${narrationColor};margin-bottom:${lineGap}px;padding-left:${narIndentL}px;padding-right:${narIndentR}px;">${parseFormatting(item.text)}</div>`;
     } else {
-      html += `<div class="script-block" style="margin-bottom:${lineGap}px;">`;
+      // ★ 대사 블록 들여쓰기
+      html += `<div class="script-block" style="margin-bottom:${lineGap}px;padding-left:${dlgIndentL}px;padding-right:${dlgIndentR}px;">`;
       html += `<span class="script-name" style="width:${nameWidth}px;min-width:${nameWidth}px;color:${nameColor};margin-right:${nameGap}px;">${parseFormatting(item.name)}</span>`;
       html += `<div class="script-dialogue-group">`;
       for (const d of item.dialogues) {
@@ -345,7 +344,11 @@ function saveJSON() {
       bgOverlayOpacity: document.getElementById('bgOverlayOpacity').value,
       bgOverlayColor: document.getElementById('bgOverlayColor').value,
       outerPadY: document.getElementById('outerPadY').value,
-      outerPadX: document.getElementById('outerPadX').value
+      outerPadX: document.getElementById('outerPadX').value,
+      narrationIndentLeft: document.getElementById('narrationIndentLeft').value,
+      narrationIndentRight: document.getElementById('narrationIndentRight').value,
+      dialogueIndentLeft: document.getElementById('dialogueIndentLeft').value,
+      dialogueIndentRight: document.getElementById('dialogueIndentRight').value
     }
   };
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
@@ -385,6 +388,10 @@ function loadJSON(e) {
       setVal('bgOverlayColor', s.bgOverlayColor);
       setVal('outerPadY', s.outerPadY);
       setVal('outerPadX', s.outerPadX);
+      setVal('narrationIndentLeft', s.narrationIndentLeft);
+      setVal('narrationIndentRight', s.narrationIndentRight);
+      setVal('dialogueIndentLeft', s.dialogueIndentLeft);
+      setVal('dialogueIndentRight', s.dialogueIndentRight);
       if (s.fontValue) document.getElementById('fontSelect').value = s.fontValue;
 
       if (data.ratio) {
@@ -401,7 +408,6 @@ function loadJSON(e) {
         setLayout(data.layout, btns[data.layout - 1]);
       }
 
-      // 슬라이더 표시값 갱신
       document.querySelectorAll('.slider-row').forEach(row => {
         const inp = row.querySelector('input[type="range"]');
         const val = row.querySelector('.slider-val');
@@ -423,7 +429,6 @@ function loadJSON(e) {
 
 // ─── Init ───
 document.addEventListener('DOMContentLoaded', () => {
-  // ★ fonts.js의 populateFontSelect 사용
   populateFontSelect('fontSelect', 'Pretendard');
   renderPreview();
 });
