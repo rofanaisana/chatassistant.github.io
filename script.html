@@ -8,43 +8,54 @@
   <link rel="stylesheet" href="css/style.css" />
   <style>
     /* ===== 대본 편집기 전용 스타일 ===== */
+
+    /* 캔버스: 전체 외곽 (배경색/이미지가 여기 깔림) */
     .script-canvas {
-      background: #fff;
       box-shadow: 0 8px 40px rgba(0,0,0,0.15);
       position: relative;
       overflow: hidden;
       width: 100%;
+      background: #fff;
     }
     .script-canvas.layout-2 {
       background-size: cover;
       background-position: center;
       background-repeat: no-repeat;
     }
+
+    /* 레이아웃2 오버레이 (배경 위에 반투명 색상) */
+    .layout-2-overlay {
+      display: none;
+      position: absolute;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+    }
+    .script-canvas.layout-2 .layout-2-overlay {
+      display: block;
+    }
+
+    /* 본문 wrapper: 레이아웃2에서 마진+흰배경 역할 */
     .script-inner {
       position: relative;
       z-index: 1;
     }
-    /* ★ 레이아웃2: 본문 영역 흰색 배경 */
     .script-canvas.layout-2 .script-inner {
       background: #fff;
+      /* 마진은 JS에서 설정 */
     }
-    .layout-2-overlay {
-      display: none;
-    }
-    .script-canvas.layout-2 .layout-2-overlay {
-      display: block;
-      position: absolute;
-      inset: 0;
-      z-index: 0;
-    }
+
     .script-top-img, .script-bottom-img {
       width: 100%;
       display: block;
       object-fit: cover;
+      position: relative;
+      z-index: 1;
     }
     .script-body {
       width: 100%;
     }
+
     /* 대사 블록 (이름 + 대사 묶음) */
     .script-block {
       display: flex;
@@ -99,7 +110,7 @@
       color: #4A90D9;
     }
 
-    /* 슬라이더 라벨 */
+    /* 슬라이더 */
     .slider-row {
       display: flex;
       align-items: center;
@@ -112,9 +123,7 @@
       color: #555;
       min-width: 50px;
     }
-    .slider-row input[type="range"] {
-      flex: 1;
-    }
+    .slider-row input[type="range"] { flex: 1; }
     .slider-row .slider-val {
       font-size: 0.78rem;
       color: #999;
@@ -122,12 +131,8 @@
       text-align: right;
     }
 
-    /* 비율 버튼 그룹 */
-    .ratio-group {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 6px;
-    }
+    /* 비율 버튼 */
+    .ratio-group { display: flex; flex-wrap: wrap; gap: 6px; }
     .ratio-btn {
       padding: 0.3rem 0.7rem;
       border: 1.5px solid #e0e3ea;
@@ -145,7 +150,7 @@
       border-color: #4A90D9;
     }
 
-    /* 이미지 업로드 영역 */
+    /* 이미지 업로드 */
     .img-upload-box {
       border: 2px dashed #e0e3ea;
       border-radius: 8px;
@@ -155,54 +160,20 @@
       color: #999;
       cursor: pointer;
       transition: all 0.15s;
-      position: relative;
     }
-    .img-upload-box:hover {
-      border-color: #4A90D9;
-      color: #4A90D9;
-    }
-    .img-upload-box img {
-      max-width: 100%;
-      max-height: 80px;
-      border-radius: 4px;
-      object-fit: contain;
-    }
+    .img-upload-box:hover { border-color: #4A90D9; color: #4A90D9; }
+    .img-upload-box img { max-width: 100%; max-height: 80px; border-radius: 4px; object-fit: contain; }
 
     /* 레이아웃 토글 */
-    .layout-toggle {
-      display: flex;
-      border: 1.5px solid #e0e3ea;
-      border-radius: 8px;
-      overflow: hidden;
-    }
+    .layout-toggle { display: flex; border: 1.5px solid #e0e3ea; border-radius: 8px; overflow: hidden; }
     .layout-toggle button {
-      flex: 1;
-      padding: 0.5rem;
-      border: none;
-      background: #fafbfc;
-      font-size: 0.82rem;
-      font-weight: 600;
-      color: #777;
-      cursor: pointer;
-      transition: all 0.15s;
+      flex: 1; padding: 0.5rem; border: none; background: #fafbfc;
+      font-size: 0.82rem; font-weight: 600; color: #777; cursor: pointer; transition: all 0.15s;
     }
-    .layout-toggle button.active {
-      background: #4A90D9;
-      color: #fff;
-    }
+    .layout-toggle button.active { background: #4A90D9; color: #fff; }
 
-    .color-row {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      margin-bottom: 0.5rem;
-    }
-    .color-row label {
-      font-size: 0.82rem;
-      font-weight: 500;
-      color: #555;
-      flex: 1;
-    }
+    .color-row { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem; }
+    .color-row label { font-size: 0.82rem; font-weight: 500; color: #555; flex: 1; }
   </style>
 </head>
 <body class="split-page">
@@ -227,7 +198,7 @@
       <!-- ========== 에디터 패널 ========== -->
       <div class="editor-panel" id="editorPanel">
 
-        <!-- 레이아웃 선택 -->
+        <!-- 레이아웃 & 비율 -->
         <div class="accordion-section" id="accordionLayout">
           <div class="accordion-header" onclick="toggleAccordion('accordionLayout')">
             <span class="accordion-title"><i class="fa-solid fa-layer-group"></i> 레이아웃 & 비율</span>
@@ -256,7 +227,7 @@
           </div>
         </div>
 
-        <!-- 이미지 설정 (레이아웃에 따라 변함) -->
+        <!-- 이미지 & 배경 -->
         <div class="accordion-section" id="accordionImages">
           <div class="accordion-header" onclick="toggleAccordion('accordionImages')">
             <span class="accordion-title"><i class="fa-solid fa-image"></i> 이미지 & 배경</span>
@@ -302,7 +273,7 @@
               <div id="bgColorOption">
                 <div class="color-row">
                   <label>배경 색상</label>
-                  <input type="color" id="bgColor" value="#ffffff" oninput="renderPreview()" />
+                  <input type="color" id="bgColor" value="#e8ddd3" oninput="renderPreview()" />
                 </div>
               </div>
               <div id="bgImageOption" style="display:none;">
@@ -326,17 +297,33 @@
                   <input type="color" id="bgOverlayColor" value="#ffffff" oninput="renderPreview()" />
                 </div>
               </div>
+              <hr style="border:none;border-top:1px solid #f0f2f5;margin:0.6rem 0;" />
+              <div class="form-group">
+                <label class="form-label">본문 바깥 여백 (배경이 보이는 영역)</label>
+                <div class="slider-row">
+                  <label>상하</label>
+                  <input type="range" id="outerPadY" min="0" max="80" value="30" oninput="renderPreview(); this.parentNode.querySelector('.slider-val').textContent=this.value+'px'" />
+                  <span class="slider-val">30px</span>
+                </div>
+                <div class="slider-row">
+                  <label>좌우</label>
+                  <input type="range" id="outerPadX" min="0" max="80" value="30" oninput="renderPreview(); this.parentNode.querySelector('.slider-val').textContent=this.value+'px'" />
+                  <span class="slider-val">30px</span>
+                </div>
+                <div class="text-muted">배경과 흰색 본문 사이의 간격입니다.</div>
+              </div>
             </div>
           </div>
         </div>
 
-        <!-- 여백 & 위치 설정 -->
+        <!-- 여백 & 위치 -->
         <div class="accordion-section" id="accordionSpacing">
           <div class="accordion-header" onclick="toggleAccordion('accordionSpacing')">
             <span class="accordion-title"><i class="fa-solid fa-arrows-alt"></i> 여백 & 위치</span>
             <i class="fa-solid fa-chevron-down accordion-toggle-icon"></i>
           </div>
           <div class="accordion-body">
+            <div class="text-muted" style="margin-bottom:0.5rem;">본문 내부 여백</div>
             <div class="slider-row">
               <label>상</label>
               <input type="range" id="padTop" min="0" max="120" value="40" oninput="renderPreview(); this.parentNode.querySelector('.slider-val').textContent=this.value+'px'" />
@@ -386,13 +373,8 @@
           <div class="accordion-body">
             <div class="form-group">
               <label class="form-label">글꼴</label>
-              <select id="fontSelect" class="form-select" onchange="renderPreview()">
-                <option value="'Noto Sans KR', sans-serif">Noto Sans KR (고딕)</option>
-                <option value="'Nanum Gothic', sans-serif">나눔고딕</option>
-                <option value="'Nanum Myeongjo', serif">나눔명조</option>
-                <option value="'RIDIBatang', serif">리디바탕</option>
-                <option value="'Pretendard', sans-serif">Pretendard</option>
-              </select>
+              <!-- ★ fonts.js에서 자동으로 채움 -->
+              <select id="fontSelect" class="form-select" onchange="renderPreview()"></select>
             </div>
             <div class="slider-row">
               <label>글자 크기</label>
@@ -433,6 +415,8 @@
             <div class="text-muted" style="margin-bottom:0.5rem;">
               <code>이름 : 대사</code> 형식으로 입력하세요.<br>
               <code>:</code> 없는 줄은 지문(나레이션)으로 처리됩니다.<br>
+              같은 이름이 연속되면 자동 병합됩니다.<br>
+              들여쓰기(공백 2칸+)로 시작하면 이전 대사에 이어집니다.<br>
               빈 줄은 문단 구분선이 됩니다.<br>
               서식: <code>**볼드**</code> <code>*이탤릭*</code> <code>~~취소선~~</code> <code>__밑줄__</code>
             </div>
@@ -469,8 +453,11 @@
         <div class="preview-inner" style="max-width:600px;">
           <div id="scriptCanvasWrap">
             <div class="script-canvas" id="scriptCanvas">
+              <!-- 레이아웃2 오버레이 -->
               <div class="layout-2-overlay" id="layout2Overlay"></div>
+              <!-- 레이아웃1 상단 이미지 -->
               <img id="topImage" class="script-top-img" style="display:none;" />
+              <!-- 본문 영역 (레이아웃2에서는 흰색 박스) -->
               <div class="script-inner" id="scriptInner">
                 <div class="script-body" id="scriptBody">
                   <div class="empty-state">
@@ -479,6 +466,7 @@
                   </div>
                 </div>
               </div>
+              <!-- 레이아웃1 하단 이미지 -->
               <img id="bottomImage" class="script-bottom-img" style="display:none;" />
             </div>
           </div>
@@ -488,6 +476,8 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+  <!-- ★ fonts.js 먼저 로드 -->
+  <script src="js/fonts.js"></script>
   <script src="js/script.js"></script>
 </body>
 </html>
