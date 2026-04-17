@@ -3,7 +3,7 @@
    ============================================================ */
 
 // ─── State ───
-let currentLayout = 1;       // 1 or 2
+let currentLayout = 1;
 let currentRatio = '3:4';
 let images = { top: null, bottom: null, bg: null };
 
@@ -42,7 +42,6 @@ function setRatio(ratio, btn) {
 
 function getRatioStyle() {
   const canvas = document.getElementById('scriptCanvas');
-  // 자유 모드: aspect-ratio 없음
   if (currentRatio === 'free') {
     canvas.style.aspectRatio = '';
     return;
@@ -66,8 +65,6 @@ function handleImg(slot, e) {
   const reader = new FileReader();
   reader.onload = function(ev) {
     images[slot] = ev.target.result;
-    // Show thumbnail in upload box
-    const labelId = slot === 'top' ? 'topImgLabel' : slot === 'bottom' ? 'bottomImgLabel' : 'bgImgLabel';
     const boxId = slot === 'top' ? 'topImgBox' : slot === 'bottom' ? 'bottomImgBox' : 'bgImgBox';
     document.getElementById(boxId).innerHTML = `<img src="${ev.target.result}" />`;
     renderPreview();
@@ -104,56 +101,86 @@ function insertFormat(before, after) {
   renderPreview();
 }
 
-// ─── Text Parsing ───
+// ─── Text Formatting ───
 function parseFormatting(text) {
   let html = text
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;');
-  // Bold **...**
   html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
-  // Italic *...*
   html = html.replace(/\*(.+?)\*/g, '<em>$1</em>');
-  // Strikethrough ~~...~~
   html = html.replace(/~~(.+?)~~/g, '<del>$1</del>');
-  // Underline __...__
   html = html.replace(/__(.+?)__/g, '<u>$1</u>');
   return html;
 }
 
+// ─── Script Parsing (★ 연속 동일 이름 병합 + 들여쓰기 이어붙이기) ───
 function parseScript(rawText) {
   const lines = rawText.split('\n');
-  const result = [];
-  for (const line of lines) {
-    const trimmed = line.trim();
+  const tokens = [];  // 중간 토큰
+
+  for (let i = 0; i < lines.length; i++) {
+    const raw = lines[i];
+    const trimmed = raw.trim();
+
+    // 빈 줄 → 문단 구분
     if (trimmed === '') {
-      result.push({ type: 'gap' });
+      tokens.push({ type: 'gap' });
       continue;
     }
-    // 첫 번째 : 를 기준으로 분리
-    const colonIdx = trimmed.indexOf(':');
-    // 영어 콜론
-    const colonIdx2 = trimmed.indexOf('：');
-    // 가장 먼저 나오는 콜론 사용 (한글 전각 콜론도 지원)
-    let idx = -1;
-    if (colonIdx >= 0 && colonIdx2 >= 0) idx = Math.min(colonIdx, colonIdx2);
-    else if (colonIdx >= 0) idx = colonIdx;
-    else if (colonIdx2 >= 0) idx = colonIdx2;
 
-    if (idx > 0 && idx < trimmed.length - 1) {
-      const name = trimmed.substring(0, idx).trim();
-      const dialogue = trimmed.substring(idx + 1).trim();
-      // 이름이 너무 길면 (20자 초과) 지문으로 처리
-      if (name.length <= 20) {
-        result.push({ type: 'line', name, dialogue });
-      } else {
-        result.push({ type: 'narration', text: trimmed });
+    // 들여쓰기 줄 감지: 줄 앞에 공백이 2개 이상 있고 콜론이 없는 경우 → 이전 대사의 연속
+    const leadingSpaces = raw.match(/^(\s*)/)[1].length;
+    const hasColon = findColonIndex(trimmed) > 0;
+
+    if (leadingSpaces >= 2 && !hasColon) {
+      // 이전 토큰이 대사(line)면 이어붙이기
+      if (tokens.length > 0 && tokens[tokens.length - 1].type === 'line') {
+        tokens[tokens.length - 1].dialogues.push(trimmed);
+        continue;
       }
-    } else {
-      result.push({ type: 'narration', text: trimmed });
     }
+
+    // 콜론 기준 분리
+    const colonIdx = findColonIndex(trimmed);
+    if (colonIdx > 0 && colonIdx < trimmed.length - 1) {
+      const name = trimmed.substring(0, colonIdx).trim();
+      const dialogue = trimmed.substring(colonIdx + 1).trim();
+      if (name.length <= 20) {
+        tokens.push({ type: 'line', name, dialogues: [dialogue] });
+        continue;
+      }
+    }
+
+    // 그 외 → 지문
+    tokens.push({ type: 'narration', text: trimmed });
   }
-  return result;
+
+  // ★ 2차 패스: 연속 동일 이름 병합
+  const merged = [];
+  for (const token of tokens) {
+    if (token.type === 'line' && merged.length > 0) {
+      const prev = merged[merged.length - 1];
+      if (prev.type === 'line' && prev.name === token.name) {
+        // 같은 이름 연속 → 대사만 추가
+        prev.dialogues.push(...token.dialogues);
+        continue;
+      }
+    }
+    merged.push(token);
+  }
+
+  return merged;
+}
+
+// 콜론 찾기 (반각 : 와 전각 ： 모두 지원)
+function findColonIndex(text) {
+  const c1 = text.indexOf(':');
+  const c2 = text.indexOf('：');
+  if (c1 >= 0 && c2 >= 0) return Math.min(c1, c2);
+  if (c1 >= 0) return c1;
+  if (c2 >= 0) return c2;
+  return -1;
 }
 
 // ─── Render ───
@@ -163,6 +190,7 @@ function renderPreview() {
   const topImg = document.getElementById('topImage');
   const bottomImg = document.getElementById('bottomImage');
   const overlay = document.getElementById('layout2Overlay');
+  const inner = document.getElementById('scriptInner');
 
   // Ratio
   getRatioStyle();
@@ -190,7 +218,7 @@ function renderPreview() {
     canvas.style.background = canvasBg;
     canvas.style.backgroundImage = '';
     overlay.style.display = 'none';
-    // Top image
+    inner.style.background = '';  // 레이아웃1은 투명
     if (images.top) {
       topImg.src = images.top;
       topImg.style.display = 'block';
@@ -198,7 +226,6 @@ function renderPreview() {
     } else {
       topImg.style.display = 'none';
     }
-    // Bottom image
     if (images.bottom) {
       bottomImg.src = images.bottom;
       bottomImg.style.display = 'block';
@@ -207,8 +234,10 @@ function renderPreview() {
       bottomImg.style.display = 'none';
     }
   } else {
+    // 레이아웃 2
     topImg.style.display = 'none';
     bottomImg.style.display = 'none';
+
     const bgType = document.getElementById('bgType').value;
     if (bgType === 'color') {
       canvas.style.background = document.getElementById('bgColor').value;
@@ -216,8 +245,11 @@ function renderPreview() {
     } else if (bgType === 'image' && images.bg) {
       canvas.style.backgroundImage = `url(${images.bg})`;
       canvas.style.backgroundColor = '';
+    } else {
+      canvas.style.background = document.getElementById('bgColor').value;
     }
-    // Overlay
+
+    // 오버레이
     const opVal = document.getElementById('bgOverlayOpacity').value;
     const ovColor = document.getElementById('bgOverlayColor').value;
     if (parseInt(opVal) > 0) {
@@ -227,10 +259,12 @@ function renderPreview() {
     } else {
       overlay.style.display = 'none';
     }
+
+    // ★ 본문 영역 흰색 배경 (레이아웃 2에서)
+    inner.style.background = '#fff';
   }
 
   // Script inner padding
-  const inner = document.getElementById('scriptInner');
   inner.style.padding = `${padTop}px ${padRight}px ${padBottom}px ${padLeft}px`;
   inner.style.fontFamily = fontFamily;
   inner.style.fontSize = fontSize + 'px';
@@ -252,9 +286,14 @@ function renderPreview() {
     } else if (item.type === 'narration') {
       html += `<div class="script-narration" style="color:${narrationColor};margin-bottom:${lineGap}px;">${parseFormatting(item.text)}</div>`;
     } else {
-      html += `<div class="script-line" style="margin-bottom:${lineGap}px;">`;
+      // ★ 이름 한 번 + 대사 여러 줄
+      html += `<div class="script-block" style="margin-bottom:${lineGap}px;">`;
       html += `<span class="script-name" style="width:${nameWidth}px;min-width:${nameWidth}px;color:${nameColor};margin-right:${nameGap}px;">${parseFormatting(item.name)}</span>`;
-      html += `<span class="script-dialogue" style="color:${dialogueColor};">${parseFormatting(item.dialogue)}</span>`;
+      html += `<div class="script-dialogue-group">`;
+      for (const d of item.dialogues) {
+        html += `<div class="script-dialogue" style="color:${dialogueColor};">${parseFormatting(d)}</div>`;
+      }
+      html += `</div>`;
       html += `</div>`;
     }
   }
@@ -341,7 +380,6 @@ function loadJSON(e) {
       setVal('bgOverlayColor', s.bgOverlayColor);
       if (s.fontFamily) document.getElementById('fontSelect').value = s.fontFamily;
 
-      // Ratio
       if (data.ratio) {
         currentRatio = data.ratio;
         document.querySelectorAll('.ratio-btn').forEach(b => {
@@ -349,7 +387,6 @@ function loadJSON(e) {
         });
       }
 
-      // Layout
       if (data.layout) {
         const btns = document.querySelectorAll('.layout-toggle button');
         btns.forEach(b => b.classList.remove('active'));
@@ -357,7 +394,6 @@ function loadJSON(e) {
         setLayout(data.layout, btns[data.layout - 1]);
       }
 
-      // Update slider display values
       document.querySelectorAll('.slider-row').forEach(row => {
         const inp = row.querySelector('input[type="range"]');
         const val = row.querySelector('.slider-val');
