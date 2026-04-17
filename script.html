@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>대본 편집기 — Chat Backup</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+  <link rel="stylesheet" href="css/style.css" />
+  <style>
+    /* ===== 대본 편집기 전용 스타일 ===== */
+    .script-canvas {
+      background: #fff;
+      box-shadow: 0 8px 40px rgba(0,0,0,0.15);
+      position: relative;
+      overflow: hidden;
+      width: 100%;
+    }
+    .script-canvas.layout-2 {
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+    }
+    .script-inner {
+      position: relative;
+      z-index: 1;
+    }
+    .layout-2-overlay {
+      display: none;
+    }
+    .script-canvas.layout-2 .layout-2-overlay {
+      display: block;
+      position: absolute;
+      inset: 0;
+      z-index: 0;
+    }
+    .script-top-img, .script-bottom-img {
+      width: 100%;
+      display: block;
+      object-fit: cover;
+    }
+    .script-body {
+      width: 100%;
+    }
+    .script-line {
+      display: flex;
+      align-items: baseline;
+    }
+    .script-name {
+      flex-shrink: 0;
+      font-weight: 700;
+      text-align: left;
+      word-break: keep-all;
+    }
+    .script-dialogue {
+      flex: 1;
+      min-width: 0;
+      word-break: break-word;
+    }
+    .script-narration {
+      width: 100%;
+      word-break: break-word;
+    }
+    .line-gap {
+      width: 100%;
+    }
+
+    /* 서식 툴바 */
+    .format-toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      margin-bottom: 0.5rem;
+    }
+    .format-toolbar button {
+      width: 30px;
+      height: 30px;
+      border: 1.5px solid #e0e3ea;
+      border-radius: 6px;
+      background: #fafbfc;
+      cursor: pointer;
+      font-size: 0.82rem;
+      color: #555;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.15s;
+    }
+    .format-toolbar button:hover {
+      background: #e8f1fb;
+      border-color: #4A90D9;
+      color: #4A90D9;
+    }
+
+    /* 슬라이더 라벨 */
+    .slider-row {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 0.5rem;
+    }
+    .slider-row label {
+      font-size: 0.82rem;
+      font-weight: 500;
+      color: #555;
+      min-width: 50px;
+    }
+    .slider-row input[type="range"] {
+      flex: 1;
+    }
+    .slider-row .slider-val {
+      font-size: 0.78rem;
+      color: #999;
+      min-width: 36px;
+      text-align: right;
+    }
+
+    /* 비율 버튼 그룹 */
+    .ratio-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+    .ratio-btn {
+      padding: 0.3rem 0.7rem;
+      border: 1.5px solid #e0e3ea;
+      border-radius: 6px;
+      background: #fafbfc;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: #555;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .ratio-btn:hover, .ratio-btn.active {
+      background: #4A90D9;
+      color: #fff;
+      border-color: #4A90D9;
+    }
+
+    /* 이미지 업로드 영역 */
+    .img-upload-box {
+      border: 2px dashed #e0e3ea;
+      border-radius: 8px;
+      padding: 0.6rem;
+      text-align: center;
+      font-size: 0.8rem;
+      color: #999;
+      cursor: pointer;
+      transition: all 0.15s;
+      position: relative;
+    }
+    .img-upload-box:hover {
+      border-color: #4A90D9;
+      color: #4A90D9;
+    }
+    .img-upload-box img {
+      max-width: 100%;
+      max-height: 80px;
+      border-radius: 4px;
+      object-fit: contain;
+    }
+
+    /* 레이아웃 토글 */
+    .layout-toggle {
+      display: flex;
+      border: 1.5px solid #e0e3ea;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    .layout-toggle button {
+      flex: 1;
+      padding: 0.5rem;
+      border: none;
+      background: #fafbfc;
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: #777;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .layout-toggle button.active {
+      background: #4A90D9;
+      color: #fff;
+    }
+
+    .color-row {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 0.5rem;
+    }
+    .color-row label {
+      font-size: 0.82rem;
+      font-weight: 500;
+      color: #555;
+      flex: 1;
+    }
+  </style>
+</head>
+<body class="split-page">
+  <div class="page-wrapper">
+    <header class="page-header">
+      <a href="index.html" class="back-link">
+        <i class="fa-solid fa-chevron-left"></i> 메인으로
+      </a>
+      <h1>🎬 대본 편집기</h1>
+    </header>
+
+    <div class="mobile-tabs">
+      <button class="mobile-tab-btn active" data-tab="editor" onclick="switchTab('editor')">
+        <i class="fa-solid fa-pen-to-square"></i> 편집
+      </button>
+      <button class="mobile-tab-btn" data-tab="preview" onclick="switchTab('preview')">
+        <i class="fa-solid fa-eye"></i> 미리보기
+      </button>
+    </div>
+
+    <div class="split-layout">
+      <!-- ========== 에디터 패널 ========== -->
+      <div class="editor-panel" id="editorPanel">
+
+        <!-- 레이아웃 선택 -->
+        <div class="accordion-section" id="accordionLayout">
+          <div class="accordion-header" onclick="toggleAccordion('accordionLayout')">
+            <span class="accordion-title"><i class="fa-solid fa-layer-group"></i> 레이아웃 & 비율</span>
+            <i class="fa-solid fa-chevron-down accordion-toggle-icon"></i>
+          </div>
+          <div class="accordion-body">
+            <div class="form-group">
+              <label class="form-label">레이아웃</label>
+              <div class="layout-toggle">
+                <button class="active" onclick="setLayout(1, this)">레이아웃 1</button>
+                <button onclick="setLayout(2, this)">레이아웃 2</button>
+              </div>
+              <div class="text-muted" style="margin-top:4px;">1: 상·하단 이미지 | 2: 배경 이미지/색상</div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">캔버스 비율</label>
+              <div class="ratio-group">
+                <button class="ratio-btn" onclick="setRatio('1:1', this)">1:1</button>
+                <button class="ratio-btn active" onclick="setRatio('3:4', this)">3:4</button>
+                <button class="ratio-btn" onclick="setRatio('4:3', this)">4:3</button>
+                <button class="ratio-btn" onclick="setRatio('9:16', this)">9:16</button>
+                <button class="ratio-btn" onclick="setRatio('16:9', this)">16:9</button>
+                <button class="ratio-btn" onclick="setRatio('free', this)">자유</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 이미지 설정 (레이아웃에 따라 변함) -->
+        <div class="accordion-section" id="accordionImages">
+          <div class="accordion-header" onclick="toggleAccordion('accordionImages')">
+            <span class="accordion-title"><i class="fa-solid fa-image"></i> 이미지 & 배경</span>
+            <i class="fa-solid fa-chevron-down accordion-toggle-icon"></i>
+          </div>
+          <div class="accordion-body">
+            <!-- 레이아웃1 전용 -->
+            <div id="layout1Options">
+              <div class="form-group">
+                <label class="form-label">상단 이미지</label>
+                <div class="img-upload-box" id="topImgBox" onclick="document.getElementById('topImgInput').click()">
+                  <span id="topImgLabel"><i class="fa-solid fa-upload"></i> 클릭하여 업로드</span>
+                </div>
+                <input type="file" id="topImgInput" accept="image/*" style="display:none" onchange="handleImg('top', event)" />
+                <button class="btn btn-danger btn-sm" style="margin-top:4px;" onclick="removeImg('top')">삭제</button>
+              </div>
+              <div class="form-group">
+                <label class="form-label">상단 이미지 높이 (px)</label>
+                <input type="number" id="topImgHeight" class="form-input" value="120" min="40" max="600" oninput="renderPreview()" />
+              </div>
+              <div class="form-group">
+                <label class="form-label">하단 이미지</label>
+                <div class="img-upload-box" id="bottomImgBox" onclick="document.getElementById('bottomImgInput').click()">
+                  <span id="bottomImgLabel"><i class="fa-solid fa-upload"></i> 클릭하여 업로드</span>
+                </div>
+                <input type="file" id="bottomImgInput" accept="image/*" style="display:none" onchange="handleImg('bottom', event)" />
+                <button class="btn btn-danger btn-sm" style="margin-top:4px;" onclick="removeImg('bottom')">삭제</button>
+              </div>
+              <div class="form-group">
+                <label class="form-label">하단 이미지 높이 (px)</label>
+                <input type="number" id="bottomImgHeight" class="form-input" value="120" min="40" max="600" oninput="renderPreview()" />
+              </div>
+            </div>
+            <!-- 레이아웃2 전용 -->
+            <div id="layout2Options" style="display:none;">
+              <div class="form-group">
+                <label class="form-label">배경 종류</label>
+                <select id="bgType" class="form-select" onchange="onBgTypeChange()">
+                  <option value="color">단색</option>
+                  <option value="image">이미지</option>
+                </select>
+              </div>
+              <div id="bgColorOption">
+                <div class="color-row">
+                  <label>배경 ���상</label>
+                  <input type="color" id="bgColor" value="#ffffff" oninput="renderPreview()" />
+                </div>
+              </div>
+              <div id="bgImageOption" style="display:none;">
+                <div class="form-group">
+                  <label class="form-label">배경 이미지</label>
+                  <div class="img-upload-box" id="bgImgBox" onclick="document.getElementById('bgImgInput').click()">
+                    <span id="bgImgLabel"><i class="fa-solid fa-upload"></i> 클릭하여 업로드</span>
+                  </div>
+                  <input type="file" id="bgImgInput" accept="image/*" style="display:none" onchange="handleImg('bg', event)" />
+                  <button class="btn btn-danger btn-sm" style="margin-top:4px;" onclick="removeImg('bg')">삭제</button>
+                </div>
+              </div>
+              <div class="form-group">
+                <label class="form-label">배경 투명도 오버레이</label>
+                <div class="slider-row">
+                  <input type="range" id="bgOverlayOpacity" min="0" max="100" value="0" oninput="renderPreview(); this.parentNode.querySelector('.slider-val').textContent=this.value+'%'" />
+                  <span class="slider-val">0%</span>
+                </div>
+                <div class="color-row" style="margin-top:4px;">
+                  <label>오버레이 색상</label>
+                  <input type="color" id="bgOverlayColor" value="#ffffff" oninput="renderPreview()" />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 여백 & 위치 설정 -->
+        <div class="accordion-section" id="accordionSpacing">
+          <div class="accordion-header" onclick="toggleAccordion('accordionSpacing')">
+            <span class="accordion-title"><i class="fa-solid fa-arrows-alt"></i> 여백 & 위치</span>
+            <i class="fa-solid fa-chevron-down accordion-toggle-icon"></i>
+          </div>
+          <div class="accordion-body">
+            <div class="slider-row">
+              <label>상</label>
+              <input type="range" id="padTop" min="0" max="120" value="40" oninput="renderPreview(); this.parentNode.querySelector('.slider-val').textContent=this.value+'px'" />
+              <span class="slider-val">40px</span>
+            </div>
+            <div class="slider-row">
+              <label>하</label>
+              <input type="range" id="padBottom" min="0" max="120" value="40" oninput="renderPreview(); this.parentNode.querySelector('.slider-val').textContent=this.value+'px'" />
+              <span class="slider-val">40px</span>
+            </div>
+            <div class="slider-row">
+              <label>좌</label>
+              <input type="range" id="padLeft" min="0" max="120" value="40" oninput="renderPreview(); this.parentNode.querySelector('.slider-val').textContent=this.value+'px'" />
+              <span class="slider-val">40px</span>
+            </div>
+            <div class="slider-row">
+              <label>우</label>
+              <input type="range" id="padRight" min="0" max="120" value="40" oninput="renderPreview(); this.parentNode.querySelector('.slider-val').textContent=this.value+'px'" />
+              <span class="slider-val">40px</span>
+            </div>
+            <hr style="border:none;border-top:1px solid #f0f2f5;margin:0.8rem 0;" />
+            <div class="slider-row">
+              <label>이름 폭</label>
+              <input type="range" id="nameWidth" min="30" max="200" value="70" oninput="renderPreview(); this.parentNode.querySelector('.slider-val').textContent=this.value+'px'" />
+              <span class="slider-val">70px</span>
+            </div>
+            <div class="text-muted">이름 컬럼의 너비를 조절합니다. 이름이 길면 늘려주세요.</div>
+            <div class="slider-row" style="margin-top:0.5rem;">
+              <label>이름↔대사 간격</label>
+              <input type="range" id="nameGap" min="0" max="80" value="20" oninput="renderPreview(); this.parentNode.querySelector('.slider-val').textContent=this.value+'px'" />
+              <span class="slider-val">20px</span>
+            </div>
+            <div class="slider-row">
+              <label>줄 간격</label>
+              <input type="range" id="lineGap" min="0" max="30" value="4" oninput="renderPreview(); this.parentNode.querySelector('.slider-val').textContent=this.value+'px'" />
+              <span class="slider-val">4px</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 글자 스타일 -->
+        <div class="accordion-section" id="accordionText">
+          <div class="accordion-header" onclick="toggleAccordion('accordionText')">
+            <span class="accordion-title"><i class="fa-solid fa-font"></i> 글자 스타일</span>
+            <i class="fa-solid fa-chevron-down accordion-toggle-icon"></i>
+          </div>
+          <div class="accordion-body">
+            <div class="form-group">
+              <label class="form-label">글꼴</label>
+              <select id="fontSelect" class="form-select" onchange="renderPreview()">
+                <option value="'Noto Sans KR', sans-serif">Noto Sans KR (고딕)</option>
+                <option value="'Nanum Gothic', sans-serif">나눔고딕</option>
+                <option value="'Nanum Myeongjo', serif">나눔명조</option>
+                <option value="'RIDIBatang', serif">리디바탕</option>
+                <option value="'Pretendard', sans-serif">Pretendard</option>
+              </select>
+            </div>
+            <div class="slider-row">
+              <label>글자 크기</label>
+              <input type="range" id="fontSize" min="10" max="32" value="14" oninput="renderPreview(); this.parentNode.querySelector('.slider-val').textContent=this.value+'px'" />
+              <span class="slider-val">14px</span>
+            </div>
+            <div class="slider-row">
+              <label>줄높이</label>
+              <input type="range" id="lineHeight" min="100" max="250" value="170" oninput="renderPreview(); this.parentNode.querySelector('.slider-val').textContent=(this.value/100).toFixed(1)" />
+              <span class="slider-val">1.7</span>
+            </div>
+            <div class="color-row">
+              <label>이름 색상</label>
+              <input type="color" id="nameColor" value="#222222" oninput="renderPreview()" />
+            </div>
+            <div class="color-row">
+              <label>대사 색상</label>
+              <input type="color" id="dialogueColor" value="#333333" oninput="renderPreview()" />
+            </div>
+            <div class="color-row">
+              <label>지문 색상</label>
+              <input type="color" id="narrationColor" value="#666666" oninput="renderPreview()" />
+            </div>
+            <div class="color-row">
+              <label>캔버스 배경색 (레이아웃1)</label>
+              <input type="color" id="canvasBg" value="#ffffff" oninput="renderPreview()" />
+            </div>
+          </div>
+        </div>
+
+        <!-- 대본 입력 -->
+        <div class="accordion-section" id="accordionScript">
+          <div class="accordion-header" onclick="toggleAccordion('accordionScript')">
+            <span class="accordion-title"><i class="fa-solid fa-pen-nib"></i> 대본 입력</span>
+            <i class="fa-solid fa-chevron-down accordion-toggle-icon"></i>
+          </div>
+          <div class="accordion-body">
+            <div class="text-muted" style="margin-bottom:0.5rem;">
+              <code>이름 : 대사</code> 형식으로 입력하세요.<br>
+              <code>:</code> 없는 줄은 지문(나레이션)으로 처리됩니��.<br>
+              빈 줄은 문단 구분선이 됩니다.<br>
+              서식: <code>**볼드**</code> <code>*이탤릭*</code> <code>~~취소선~~</code> <code>__밑줄__</code>
+            </div>
+            <div class="format-toolbar">
+              <button title="볼드" onclick="insertFormat('**','**')"><b>B</b></button>
+              <button title="이탤릭" onclick="insertFormat('*','*')"><i>I</i></button>
+              <button title="취소선" onclick="insertFormat('~~','~~')"><s>S</s></button>
+              <button title="밑줄" onclick="insertFormat('__','__')"><u>U</u></button>
+            </div>
+            <textarea id="scriptInput" class="form-textarea" rows="16" placeholder="은탁과 다시 소주 마시는 도깨비.
+
+은탁 : 자 힘부터 다시 낭만 시작해 보십시다. 건배!
+도깨비 : 아직도 낭만적이야?
+은탁 : (크게 끄덕 끄덕) 아까보다 더요.
+
+은 마음을 다해..." oninput="renderPreview()"></textarea>
+          </div>
+        </div>
+
+        <!-- 내보내기 -->
+        <div class="export-section">
+          <div class="section-title"><i class="fa-solid fa-share-nodes"></i> 내보내기</div>
+          <div class="btn-group">
+            <button class="btn btn-primary btn-sm" onclick="saveImage()"><i class="fa-solid fa-image"></i> 이미지 저장 (PNG)</button>
+            <button class="btn btn-secondary btn-sm" onclick="saveJSON()"><i class="fa-solid fa-download"></i> JSON 저장</button>
+            <button class="btn btn-secondary btn-sm" onclick="document.getElementById('loadFile').click()"><i class="fa-solid fa-upload"></i> 불러오기</button>
+          </div>
+          <input type="file" id="loadFile" accept=".json" style="display:none" onchange="loadJSON(event)" />
+        </div>
+      </div>
+
+      <!-- ========== 미리보기 패널 ========== -->
+      <div class="preview-panel" id="previewPanel">
+        <div class="preview-inner" style="max-width:600px;">
+          <div id="scriptCanvasWrap">
+            <div class="script-canvas" id="scriptCanvas">
+              <div class="layout-2-overlay" id="layout2Overlay"></div>
+              <img id="topImage" class="script-top-img" style="display:none;" />
+              <div class="script-inner" id="scriptInner">
+                <div class="script-body" id="scriptBody">
+                  <div class="empty-state">
+                    <i class="fa-solid fa-pen-nib"></i>
+                    <p>대본을 입력하면 여기에 표시됩니다</p>
+                  </div>
+                </div>
+              </div>
+              <img id="bottomImage" class="script-bottom-img" style="display:none;" />
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+  <script src="js/script.js"></script>
+</body>
+</html>
