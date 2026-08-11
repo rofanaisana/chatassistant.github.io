@@ -25,6 +25,23 @@
     statusEl.dataset.tone = tone || '';
   }
 
+  /* html-to-image는 Error가 아닌 값(이미지 onerror 이벤트 등)으로 reject하는
+     경로가 있다. 그대로 .message를 읽으면 undefined가 뜨므로 직접 풀어쓴다. */
+  function describe(e) {
+    console.error('[capture]', e);
+    if (!e) return '알 수 없는 오류';
+    if (typeof e === 'string') return e;
+    if (e.message) return e.message;
+    if (e.target && e.target.tagName) {
+      var src = e.target.src || e.target.href || '';
+      var kind = e.target.tagName.toLowerCase();
+      return kind + ' 로드 실패' + (src ? ' (' + src.slice(0, 60) + '…)' : '') +
+             ' — 콘솔(F12)에서 상세 확인';
+    }
+    if (e.type) return e.type + ' 이벤트 — 콘솔(F12)에서 상세 확인';
+    try { return JSON.stringify(e); } catch (_) { return String(e); }
+  }
+
   function busy(on) {
     ['savePngBtn', 'saveGifBtn'].forEach(function (id) {
       var b = $(id);
@@ -64,15 +81,17 @@
     return { w: w, h: Math.ceil(h), node: root };
   }
 
-  function options(r, ratio) {
-    return {
+  function options(r, extra) {
+    var o = {
       width: r.w,
       height: r.h,
-      pixelRatio: ratio,
+      pixelRatio: 1,
       backgroundColor: '#ffffff',
       cacheBust: true,
       skipFonts: $('embedFonts') ? !$('embedFonts').checked : false
     };
+    for (var k in extra) o[k] = extra[k];
+    return o;
   }
 
   function download(href, name, revoke) {
@@ -107,23 +126,25 @@
         var r = region();
         var ratio = parseInt($('captureScale') ? $('captureScale').value : 2, 10);
         return frame.contentWindow.htmlToImage
-          .toPng(r.node, options(r, ratio))
+          .toPng(r.node, options(r, { pixelRatio: ratio }))
           .then(function (url) {
             download(url, 'viewer-' + stamp() + '.png');
             status(r.w + '×' + r.h + ' @' + ratio + 'x 저장 완료');
           });
       })
-      .catch(function (e) { status('PNG 실패: ' + e.message, 'warn'); })
+      .catch(function (e) { status('PNG 실패: ' + describe(e), 'warn'); })
       .then(function () { busy(false); });
   };
 
   /* ── GIF ─────────────────────────────────────────── */
 
-  /* 애니메이션 1회 재생에 걸리는 시간(ms) */
+  /* 애니메이션 1회 재생에 걸리는 시간(ms). duration이 "auto"인 경우가 있어 걸러낸다. */
   function span(a) {
     var t = a.effect.getComputedTiming();
+    var dur = typeof t.duration === 'number' ? t.duration : 0;
     var iter = isFinite(t.iterations) ? t.iterations : 1;
-    return (t.delay || 0) + (t.endDelay || 0) + (t.duration || 0) * iter;
+    var ms = (t.delay || 0) + (t.endDelay || 0) + dur * iter;
+    return isFinite(ms) ? ms : 0;
   }
 
   function twoFrames(win) {
@@ -143,6 +164,7 @@
 
     try {
       await ensureLib();
+
       if (!gifencMod) {
         var mod = await import(GIFENC);
         // 배포 형태에 따라 named export가 default 아래로 들어가는 경우가 있다
@@ -161,11 +183,37 @@
       }
 
       var r = region();
+      if (r.w * r.h > 4000000) {
+        status('영역이 너무 큽니다 (' + r.w + '×' + r.h + '). "전체 높이"를 끄고 다시 시도하세요.', 'warn');
+        busy(false);
+        return;
+      }
+
       var fps = parseInt($('gifFps').value, 10) || 15;
       var limit = (parseFloat($('gifSecs').value) || 3) * 1000;
-      var total = Math.min(Math.max.apply(null, anims.map(span)), limit);
+      var longest = Math.max.apply(null, anims.map(span));
+      var total = Math.min(longest > 0 ? longest : limit, limit);
       var step = 1000 / fps;
       var count = Math.max(2, Math.round(total / step));
+
+      /* 폰트 CSS는 한 번만 만들어 모든 프레임에 재사용한다.
+         프레임마다 다시 받으면 느릴 뿐 아니라 한 번만 실패해도 전체가 터진다. */
+      var fontCSS = '';
+      if (!options(r).skipFonts && typeof win.htmlToImage.getFontEmbedCSS === 'function') {
+        status('폰트 준비 중…');
+        try {
+          fontCSS = await win.htmlToImage.getFontEmbedCSS(r.node);
+        } catch (e) {
+          console.warn('[capture] 폰트 임베드 실패, 시스템 폰트로 진행', e);
+        }
+      }
+
+      var frameOpts = options(r, {
+        pixelRatio: 1,
+        cacheBust: false,          // 매 프레임 재요청하면 로드 실패가 쉽게 난다
+        skipFonts: true,           // 아래 fontEmbedCSS로 대체
+        fontEmbedCSS: fontCSS
+      });
 
       var enc = gifencMod.GIFEncoder();
       var buf = document.createElement('canvas');
@@ -183,7 +231,13 @@
           });
           await twoFrames(win);
 
-          var c = await win.htmlToImage.toCanvas(r.node, options(r, 1));
+          var c;
+          try {
+            c = await win.htmlToImage.toCanvas(r.node, frameOpts);
+          } catch (e) {
+            throw new Error('프레임 ' + (i + 1) + '/' + count + ' — ' + describe(e));
+          }
+
           ctx.fillStyle = '#ffffff';
           ctx.fillRect(0, 0, r.w, r.h);
           ctx.drawImage(c, 0, 0, r.w, r.h);
@@ -206,7 +260,7 @@
         anims.forEach(function (a) { a.play(); });
       }
     } catch (e) {
-      status('GIF 실패: ' + e.message, 'warn');
+      status('GIF 실패: ' + describe(e), 'warn');
     } finally {
       busy(false);
     }
