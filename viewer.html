@@ -1,364 +1,262 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>제판대 — HTML을 이미지로</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
-<link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css" rel="stylesheet">
-<style>
-  :root{
-    --ink:#0E1A1F;
-    --plate:#14262D;
-    --rule:#2A4A55;
-    --paper:#D8E8EC;
-    --dim:#7FA0AA;
-    --cyan:#4FD1D9;
-    --amber:#E0A458;
-    --sans:"Pretendard Variable",Pretendard,system-ui,sans-serif;
-    --mono:"JetBrains Mono",ui-monospace,monospace;
-  }
-  *{box-sizing:border-box}
-  html,body{margin:0;height:100%}
-  body{
-    background:var(--ink);color:var(--paper);font-family:var(--sans);
-    font-size:14px;line-height:1.5;
-    display:flex;flex-direction:column;
-  }
-  header{
-    display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;
-    padding:14px 20px;border-bottom:1px solid var(--rule);
-  }
-  header h1{
-    margin:0;font-size:15px;font-weight:700;letter-spacing:.34em;
-    text-transform:uppercase;font-family:var(--mono);
-  }
-  header p{margin:0;color:var(--dim);font-size:12.5px}
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HTML 뷰어 — Chat Backup</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+  <link rel="stylesheet" href="css/style.css" />
+  <style>
+    .viewer-layout {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      height: calc(100vh - 57px);
+      overflow: hidden;
+    }
+    .viewer-editor {
+      background: #1e1e2e;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      border-right: 1px solid #333;
+    }
+    .viewer-editor-header {
+      padding: 0.5rem 1rem;
+      background: #2a2a3e;
+      color: #aaa;
+      font-size: 0.78rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      flex-shrink: 0;
+    }
+    .viewer-editor-header i { color: #4A90D9; }
+    #htmlInput {
+      flex: 1;
+      width: 100%;
+      background: #1e1e2e;
+      color: #cdd6f4;
+      border: none;
+      outline: none;
+      font-family: 'Fira Code', 'Cascadia Code', 'Consolas', 'Monaco', monospace;
+      font-size: 0.88rem;
+      line-height: 1.7;
+      padding: 1rem;
+      resize: none;
+      overflow-y: auto;
+      tab-size: 2;
+    }
+    #htmlInput::-webkit-scrollbar { width: 6px; }
+    #htmlInput::-webkit-scrollbar-track { background: #1e1e2e; }
+    #htmlInput::-webkit-scrollbar-thumb { background: #444; border-radius: 3px; }
 
-  main{flex:1;display:grid;grid-template-columns:minmax(320px,4fr) minmax(400px,6fr);min-height:0}
-  @media (max-width:900px){main{grid-template-columns:1fr;overflow:auto}}
+    .viewer-preview {
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      background: #fff;
+    }
+    .viewer-preview-header {
+      padding: 0.5rem 1rem;
+      background: #f8f9fb;
+      border-bottom: 1px solid #e8eaf0;
+      color: #999;
+      font-size: 0.78rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      flex-shrink: 0;
+    }
+    .viewer-preview-header i { color: #4A90D9; }
+    .viewer-preview-header .save-btn {
+      background: #4A90D9;
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      padding: 0.25rem 0.7rem;
+      font-size: 0.75rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+      transition: background 0.15s;
+      text-transform: none;
+      letter-spacing: 0;
+    }
+    .viewer-preview-header .save-btn:first-of-type { margin-left: auto; }
+    .viewer-preview-header .save-btn:hover:not(:disabled) { background: #3a7bc8; }
+    .viewer-preview-header .save-btn:disabled { opacity: 0.5; cursor: default; }
+    .viewer-preview-header .save-btn.ghost {
+      background: #fff;
+      color: #4A90D9;
+      border: 1px solid #cfdcea;
+    }
+    .viewer-preview-header .save-btn.ghost:hover:not(:disabled) { background: #eef4fb; }
 
-  .col{display:flex;flex-direction:column;min-height:0;min-width:0}
-  .col+.col{border-left:1px solid var(--rule)}
-  @media (max-width:900px){.col+.col{border-left:0;border-top:1px solid var(--rule)}}
+    /* 캡처 옵션 바 */
+    .capture-bar {
+      display: flex;
+      align-items: center;
+      gap: 0.9rem;
+      flex-wrap: wrap;
+      padding: 0.4rem 1rem;
+      background: #fbfcfe;
+      border-bottom: 1px solid #e8eaf0;
+      font-size: 0.72rem;
+      color: #8a94a3;
+      flex-shrink: 0;
+    }
+    .capture-bar label {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+      white-space: nowrap;
+    }
+    .capture-bar select,
+    .capture-bar input[type="number"] {
+      border: 1px solid #dde3ec;
+      border-radius: 4px;
+      background: #fff;
+      color: #4a5462;
+      font-size: 0.72rem;
+      padding: 0.15rem 0.3rem;
+      font-family: inherit;
+    }
+    .capture-bar input[type="number"] { width: 3.4rem; }
+    .capture-bar input[type="checkbox"] { accent-color: #4A90D9; margin: 0; }
+    #captureStatus { margin-left: auto; color: #4A90D9; }
+    #captureStatus[data-tone="warn"] { color: #d9704a; }
 
-  .bar{
-    display:flex;align-items:center;gap:10px;flex-wrap:wrap;
-    padding:9px 16px;border-bottom:1px solid var(--rule);
-  }
-  .bar.foot{border-bottom:0;border-top:1px solid var(--rule)}
-  .eyebrow{
-    font-family:var(--mono);font-size:10.5px;letter-spacing:.2em;
-    text-transform:uppercase;color:var(--dim);margin-right:auto;
-  }
+    #previewFrame {
+      flex: 1;
+      width: 100%;
+      border: none;
+      overflow: auto;
+    }
 
-  textarea{
-    flex:1;min-height:240px;resize:none;border:0;outline:0;
-    background:transparent;color:var(--paper);
-    font-family:var(--mono);font-size:12.5px;line-height:1.65;
-    padding:16px;tab-size:2;
-  }
-  textarea::placeholder{color:#3D5F6A}
-
-  label{font-size:12px;color:var(--dim);display:inline-flex;align-items:center;gap:6px}
-  input[type=number]{
-    width:70px;background:var(--plate);border:1px solid var(--rule);
-    color:var(--paper);font-family:var(--mono);font-size:12px;
-    padding:4px 6px;border-radius:2px;
-  }
-  input[type=color]{
-    width:30px;height:26px;padding:0;background:none;
-    border:1px solid var(--rule);border-radius:2px;
-  }
-  input[type=checkbox]{accent-color:var(--cyan)}
-
-  button{
-    font-family:var(--sans);font-size:12.5px;font-weight:600;
-    background:var(--plate);color:var(--paper);
-    border:1px solid var(--rule);border-radius:2px;
-    padding:6px 13px;cursor:pointer;
-  }
-  button:hover:not(:disabled){border-color:var(--cyan);color:var(--cyan)}
-  button:focus-visible{outline:2px solid var(--cyan);outline-offset:2px}
-  button:disabled{opacity:.4;cursor:not-allowed}
-  button.go{background:var(--cyan);color:var(--ink);border-color:var(--cyan)}
-  button.go:hover:not(:disabled){background:#7BE3E9;color:var(--ink)}
-
-  /* ── 노출대: the capture frame ───────────────────── */
-  .stage{
-    flex:1;overflow:auto;padding:34px 34px 24px;min-height:0;
-    background:
-      linear-gradient(var(--plate) 1px,transparent 1px) 0 0/100% 24px,
-      var(--ink);
-  }
-  .plate{position:relative;width:max-content;margin:0 auto}
-  .ticks{position:absolute;inset:-13px;pointer-events:none}
-  .ticks span{position:absolute;width:11px;height:11px;border:1px solid var(--cyan)}
-  .ticks span:nth-child(1){top:0;left:0;border-right:0;border-bottom:0}
-  .ticks span:nth-child(2){top:0;right:0;border-left:0;border-bottom:0}
-  .ticks span:nth-child(3){bottom:0;left:0;border-right:0;border-top:0}
-  .ticks span:nth-child(4){bottom:0;right:0;border-left:0;border-top:0}
-  .readout{
-    position:absolute;font-family:var(--mono);font-size:10px;
-    letter-spacing:.12em;color:var(--cyan);white-space:nowrap;
-  }
-  .readout.top{top:-28px;left:0}
-  .readout.side{top:0;left:-14px;transform-origin:0 0;transform:rotate(90deg)}
-  iframe{display:block;border:0;background:#fff}
-  .scan{
-    position:absolute;inset:0;pointer-events:none;opacity:0;
-    background:linear-gradient(90deg,transparent,rgba(79,209,217,.28),transparent);
-    width:22%;
-  }
-  .scan.on{opacity:1;animation:sweep 1.1s linear infinite}
-  @keyframes sweep{from{transform:translateX(-120%)}to{transform:translateX(560%)}}
-  @media (prefers-reduced-motion:reduce){.scan.on{animation:none;opacity:.35;width:100%}}
-
-  .log{
-    height:104px;overflow:auto;padding:10px 16px;
-    border-top:1px solid var(--rule);
-    font-family:var(--mono);font-size:11.5px;line-height:1.7;color:var(--dim);
-  }
-  .log b{color:var(--cyan);font-weight:400}
-  .log i{color:var(--amber);font-style:normal}
-  .empty{color:var(--dim);text-align:center;padding:60px 20px;font-size:13px}
-</style>
+    @media (max-width: 768px) {
+      .viewer-layout {
+        grid-template-columns: 1fr;
+        position: relative;
+      }
+      .viewer-editor,
+      .viewer-preview {
+        position: absolute;
+        inset: 0;
+        height: 100%;
+      }
+      .viewer-preview { display: none; }
+      .viewer-editor[data-hidden="true"] { display: none; }
+      .viewer-preview:not([data-hidden]) { display: flex; }
+      #captureStatus { width: 100%; margin-left: 0; }
+    }
+  </style>
 </head>
-<body>
+<body class="split-page">
+  <div class="page-wrapper">
 
-<header>
-  <h1>제판대</h1>
-  <p>HTML을 붙여넣고, 보이는 그대로 PNG나 GIF로 굽습니다.</p>
-</header>
+    <header class="page-header">
+      <a href="index.html" class="back-link">
+        <i class="fa-solid fa-chevron-left"></i> 메인으로
+      </a>
+      <h1>🖥️ HTML 뷰어</h1>
+    </header>
 
-<main>
-  <!-- 원고 -->
-  <section class="col">
-    <div class="bar">
-      <span class="eyebrow">원고</span>
-      <button id="sample">예제 넣기</button>
-      <button id="clear">비우기</button>
-      <button id="render" class="go">미리보기</button>
-    </div>
-    <textarea id="src" spellcheck="false" placeholder="&lt;style&gt; 태그를 포함한 HTML을 그대로 붙여넣으세요."></textarea>
-    <div class="bar foot">
-      <label>가로 <input type="number" id="w" value="600" min="40" max="4000" step="10"></label>
-      <label>세로 <input type="number" id="h" value="400" min="40" max="4000" step="10"></label>
-      <label><input type="checkbox" id="autoH" checked> 내용에 맞춤</label>
-      <label>배경 <input type="color" id="bg" value="#ffffff"></label>
-    </div>
-  </section>
-
-  <!-- 노출대 -->
-  <section class="col">
-    <div class="bar">
-      <span class="eyebrow">노출대</span>
-      <label>배율 <input type="number" id="scale" value="2" min="1" max="4" step="1"></label>
-      <button id="png" class="go" disabled>PNG로 굽기</button>
+    <div class="mobile-tabs">
+      <button class="mobile-tab-btn active" data-tab="editor" onclick="switchViewerTab('editor')">
+        <i class="fa-solid fa-code"></i> 코드
+      </button>
+      <button class="mobile-tab-btn" data-tab="preview" onclick="switchViewerTab('preview')">
+        <i class="fa-solid fa-eye"></i> 미리보기
+      </button>
     </div>
 
-    <div class="stage">
-      <div class="plate" id="plate" hidden>
-        <div class="readout top" id="roTop">—</div>
-        <div class="readout side" id="roSide">—</div>
-        <div class="ticks"><span></span><span></span><span></span><span></span></div>
-        <iframe id="view" sandbox="allow-same-origin allow-scripts"></iframe>
-        <div class="scan" id="scan"></div>
+    <div class="viewer-layout">
+
+      <!-- Left: Code Editor -->
+      <div class="viewer-editor" id="viewerEditorPanel">
+        <div class="viewer-editor-header">
+          <i class="fa-solid fa-code"></i> HTML 코드 입력
+        </div>
+        <textarea id="htmlInput" oninput="updatePreview()" placeholder="여기에 HTML 코드를 붙여넣으세요...
+
+예시:
+&lt;h1&gt;안녕하세요!&lt;/h1&gt;
+&lt;p style=&quot;color:red;&quot;&gt;빨간 글씨&lt;/p&gt;"></textarea>
       </div>
-      <p class="empty" id="empty">왼쪽에 HTML을 넣고 <b>미리보기</b>를 누르면 여기에 판이 올라갑니다.</p>
+
+      <!-- Right: Preview -->
+      <div class="viewer-preview" id="viewerPreviewPanel">
+        <div class="viewer-preview-header">
+          <i class="fa-solid fa-eye"></i> 미리보기 (실시간)
+          <button class="save-btn" id="savePngBtn" onclick="savePngImage()">
+            <i class="fa-solid fa-image"></i> PNG 저장
+          </button>
+          <button class="save-btn ghost" id="saveGifBtn" onclick="saveGifImage()">
+            <i class="fa-solid fa-film"></i> GIF 저장
+          </button>
+        </div>
+
+        <div class="capture-bar">
+          <label>배율
+            <select id="captureScale">
+              <option value="1">1x</option>
+              <option value="2" selected>2x</option>
+              <option value="3">3x</option>
+            </select>
+          </label>
+          <label><input type="checkbox" id="captureFull" checked> 전체 높이</label>
+          <label><input type="checkbox" id="embedFonts" checked> 웹폰트 포함</label>
+          <label>fps <input type="number" id="gifFps" value="15" min="2" max="30" step="1"></label>
+          <label>최대 초 <input type="number" id="gifSecs" value="3" min="0.2" max="15" step="0.1"></label>
+          <span id="captureStatus"></span>
+        </div>
+
+        <!-- allow-same-origin이 있어야 부모에서 이 안을 캡처할 수 있다 -->
+        <iframe id="previewFrame" sandbox="allow-scripts allow-same-origin"></iframe>
+      </div>
+
     </div>
+  </div>
 
-    <div class="bar foot">
-      <span class="eyebrow">GIF</span>
-      <label>fps <input type="number" id="fps" value="15" min="2" max="30" step="1"></label>
-      <label>최대 초 <input type="number" id="secs" value="3" min="0.2" max="15" step="0.1"></label>
-      <label><input type="checkbox" id="fonts" checked> 웹폰트 포함</label>
-      <button id="gif" disabled>GIF로 굽기</button>
-    </div>
+  <script src="js/capture.js"></script>
+  <script>
+    const htmlInput = document.getElementById('htmlInput');
+    const previewFrame = document.getElementById('previewFrame');
+    let previewTimer = null;
 
-    <div class="log" id="log"></div>
-  </section>
-</main>
-
-<script type="module">
-import { GIFEncoder, quantize, applyPalette } from 'https://esm.sh/gifenc@1.0.3';
-
-const $ = id => document.getElementById(id);
-const view=$('view'), plate=$('plate'), empty=$('empty'), scan=$('scan');
-const LIB = 'https://cdn.jsdelivr.net/npm/html-to-image@1.11.11/dist/html-to-image.js';
-
-let ready = false;
-
-function log(msg, kind){
-  const el = document.createElement('div');
-  el.innerHTML = kind ? `<${kind}>${msg}</${kind}>` : msg;
-  $('log').prepend(el);
-}
-
-function fit(){
-  const w = +$('w').value;
-  let h = +$('h').value;
-  if ($('autoH').checked && view.contentDocument){
-    const d = view.contentDocument;
-    h = Math.max(d.documentElement.scrollHeight, d.body ? d.body.scrollHeight : 0, 40);
-    $('h').value = Math.round(h);
-  }
-  view.style.width = w + 'px';
-  view.style.height = Math.round(h) + 'px';
-  $('roTop').textContent = `W ${w}`;
-  $('roSide').textContent = `H ${Math.round(h)}`;
-  return { w, h: Math.round(h) };
-}
-
-/* 뷰어에 코드를 올리고, 캡처 라이브러리를 뷰어 안쪽에 주입한다.
-   안쪽에서 실행해야 iframe의 window/document 기준으로 스타일을 읽는다. */
-function render(){
-  const html = $('src').value.trim();
-  if (!html){ log('원고가 비어 있습니다.','i'); return; }
-  ready = false; $('png').disabled = true; $('gif').disabled = true;
-  plate.hidden = false; empty.hidden = true;
-  view.style.background = $('bg').value;
-
-  view.onload = async () => {
-    const win = view.contentWindow, doc = view.contentDocument;
-    fit();
-    try {
-      await new Promise((res, rej) => {
-        const s = doc.createElement('script');
-        s.src = LIB; s.onload = res; s.onerror = () => rej(new Error('라이브러리 로드 실패'));
-        doc.head.appendChild(s);
-      });
-      ready = true;
-      $('png').disabled = false; $('gif').disabled = false;
-      const n = doc.getAnimations ? doc.getAnimations().length : 0;
-      log(`판 올림 · 애니메이션 ${n}개`, 'b');
-    } catch (e) {
-      log(e.message + ' — 네트워크를 확인하세요.', 'i');
+    // 키 입력마다 iframe을 다시 로드하면 무거우므로 살짝 늦춘다
+    function updatePreview() {
+      clearTimeout(previewTimer);
+      previewTimer = setTimeout(() => {
+        previewFrame.srcdoc = htmlInput.value;
+      }, 200);
     }
-  };
-  view.srcdoc = html;
-}
 
-function opts(size){
-  return {
-    width: size.w, height: size.h,
-    backgroundColor: $('bg').value,
-    pixelRatio: +$('scale').value,
-    skipFonts: !$('fonts').checked,
-    cacheBust: true,
-    style: { margin: '0' }
-  };
-}
+    function switchViewerTab(tab) {
+      const editor = document.getElementById('viewerEditorPanel');
+      const preview = document.getElementById('viewerPreviewPanel');
 
-function save(blobOrUrl, name){
-  const a = document.createElement('a');
-  a.download = name;
-  a.href = typeof blobOrUrl === 'string' ? blobOrUrl : URL.createObjectURL(blobOrUrl);
-  a.click();
-  if (typeof blobOrUrl !== 'string') setTimeout(() => URL.revokeObjectURL(a.href), 4000);
-}
+      document.querySelectorAll('.mobile-tab-btn').forEach(btn => btn.classList.remove('active'));
+      document.querySelector(`[data-tab="${tab}"]`).classList.add('active');
 
-const stamp = () => new Date().toISOString().slice(0,19).replace(/[-:T]/g,'');
-
-async function toPng(){
-  if (!ready) return;
-  const size = fit();
-  $('png').disabled = true; scan.classList.add('on');
-  try {
-    const url = await view.contentWindow.htmlToImage.toPng(view.contentDocument.body, opts(size));
-    save(url, `plate-${stamp()}.png`);
-    log(`PNG 저장 · ${size.w}×${size.h} @${$('scale').value}x`, 'b');
-  } catch (e) {
-    log('PNG 실패: ' + e.message, 'i');
-  } finally {
-    scan.classList.remove('on'); $('png').disabled = false;
-  }
-}
-
-/* CSS 애니메이션을 일시정지시키고 currentTime을 한 칸씩 옮겨가며 찍는다.
-   캡처가 느려도 프레임 간격이 정확히 유지된다. */
-function span(a){
-  const t = a.effect.getComputedTiming();
-  const iter = Number.isFinite(t.iterations) ? t.iterations : 1;
-  return (t.delay||0) + (t.endDelay||0) + (t.duration||0) * iter;
-}
-
-async function toGif(){
-  if (!ready) return;
-  const size = fit();
-  const win = view.contentWindow, doc = view.contentDocument;
-  const anims = doc.getAnimations ? doc.getAnimations() : [];
-  if (!anims.length){ log('움직이는 CSS 애니메이션이 없습니다. PNG를 쓰세요.','i'); return; }
-
-  const fps = +$('fps').value;
-  const total = Math.min(Math.max(...anims.map(span)), +$('secs').value * 1000);
-  const step = 1000 / fps;
-  const frames = Math.max(2, Math.round(total / step));
-
-  $('gif').disabled = true; $('png').disabled = true; scan.classList.add('on');
-  log(`GIF 굽는 중 · ${frames}프레임 / ${(total/1000).toFixed(1)}초`, 'b');
-
-  const enc = GIFEncoder();
-  const buf = document.createElement('canvas');
-  buf.width = size.w; buf.height = size.h;
-  const ctx = buf.getContext('2d', { willReadFrequently: true });
-
-  anims.forEach(a => a.pause());
-  try {
-    for (let i = 0; i < frames; i++){
-      anims.forEach(a => { try { a.currentTime = i * step; } catch {} });
-      await new Promise(r => win.requestAnimationFrame(() => win.requestAnimationFrame(r)));
-
-      const c = await win.htmlToImage.toCanvas(doc.body, { ...opts(size), pixelRatio: 1 });
-      ctx.fillStyle = $('bg').value;
-      ctx.fillRect(0, 0, size.w, size.h);
-      ctx.drawImage(c, 0, 0, size.w, size.h);
-
-      const { data } = ctx.getImageData(0, 0, size.w, size.h);
-      const pal = quantize(data, 256);
-      enc.writeFrame(applyPalette(data, pal), size.w, size.h, { palette: pal, delay: Math.round(step) });
-      if (i % 5 === 0) log(`  ${i + 1}/${frames}`);
+      if (tab === 'editor') {
+        editor.removeAttribute('data-hidden');
+        preview.setAttribute('data-hidden', 'true');
+      } else {
+        editor.setAttribute('data-hidden', 'true');
+        preview.removeAttribute('data-hidden');
+      }
     }
-    enc.finish();
-    save(new Blob([enc.bytes()], { type: 'image/gif' }), `plate-${stamp()}.gif`);
-    log(`GIF 저장 · ${size.w}×${size.h} · ${fps}fps`, 'b');
-  } catch (e) {
-    log('GIF 실패: ' + e.message, 'i');
-  } finally {
-    anims.forEach(a => a.play());
-    scan.classList.remove('on');
-    $('gif').disabled = false; $('png').disabled = false;
-  }
-}
 
-$('render').onclick = render;
-$('png').onclick = toPng;
-$('gif').onclick = toGif;
-$('clear').onclick = () => { $('src').value=''; plate.hidden=true; empty.hidden=false; ready=false; };
-['w','h','autoH','bg'].forEach(id => $(id).onchange = () => { if (ready) { view.style.background = $('bg').value; fit(); } });
-$('src').addEventListener('keydown', e => {
-  if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') render();
-});
-
-$('sample').onclick = () => {
-  $('src').value = `<style>
-  body { margin:0; display:grid; place-items:center; height:400px;
-         background:#0E1A1F; font-family:system-ui; }
-  .chip { padding:22px 34px; border:1px solid #4FD1D9; border-radius:4px;
-          color:#D8E8EC; letter-spacing:.3em; text-transform:uppercase;
-          animation: pulse 1.6s ease-in-out infinite; }
-  @keyframes pulse {
-    0%,100% { transform:scale(1);    box-shadow:0 0 0 0 rgba(79,209,217,.5); }
-    50%     { transform:scale(1.06); box-shadow:0 0 0 18px rgba(79,209,217,0); }
-  }
-</style>
-<div class="chip">exposure</div>`;
-  render();
-};
-
-log('준비됨. Ctrl(⌘)+Enter로 미리보기.');
-</script>
+    updatePreview();
+  </script>
 </body>
 </html>
