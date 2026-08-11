@@ -10,7 +10,9 @@
   'use strict';
 
   var LIB = 'https://cdn.jsdelivr.net/npm/html-to-image@1.11.11/dist/html-to-image.js';
-  var GIFENC = 'https://esm.sh/gifenc@1.0.3';
+  // gifenc의 main 필드는 CJS라 변환 서비스를 거치면 named export가 깨진다.
+  // ESM 빌드를 직접 가리킨다.
+  var GIFENC = 'https://cdn.jsdelivr.net/npm/gifenc@1.0.3/dist/gifenc.esm.js';
 
   var frame, statusEl;
   var gifencMod = null;
@@ -141,7 +143,15 @@
 
     try {
       await ensureLib();
-      if (!gifencMod) gifencMod = await import(GIFENC);
+      if (!gifencMod) {
+        var mod = await import(GIFENC);
+        // 배포 형태에 따라 named export가 default 아래로 들어가는 경우가 있다
+        gifencMod = typeof mod.GIFEncoder === 'function' ? mod : (mod.default || mod);
+        if (typeof gifencMod.GIFEncoder !== 'function') {
+          gifencMod = null;
+          throw new Error('GIF 인코더를 불러오지 못했습니다. 네트워크를 확인하세요.');
+        }
+      }
 
       anims = doc.getAnimations ? doc.getAnimations() : [];
       if (!anims.length) {
