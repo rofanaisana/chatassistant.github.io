@@ -1,8 +1,11 @@
 /* capture.js — 미리보기 iframe을 PNG / GIF로 저장
  *
- * 핵심: 캡처 라이브러리를 iframe "안쪽"에 주입해서 iframe 안에서 실행한다.
- * 부모에서 실행하면 getComputedStyle이 부모 window 기준으로 동작해
- * 스타일이 통째로 날아가는 경우가 많다.
+ * 구조상 알아둘 것:
+ * 1) 캡처 라이브러리는 iframe "안쪽"에 주입해서 iframe 안에서 실행한다.
+ *    부모에서 실행하면 getComputedStyle이 부모 window 기준으로 동작해 스타일이 날아간다.
+ * 2) SVG foreignObject는 외부 리소스를 못 불러온다. 그래서 캡처 전에
+ *    모든 외부 이미지를 data URL로 바꿔 심어야 한다. CORS를 막는 서버가 많아
+ *    이미지 프록시를 거치는 경로를 둔다.
  *
  * 전제: previewFrame에 sandbox="allow-scripts allow-same-origin"이 걸려 있어야 한다.
  */
@@ -10,9 +13,10 @@
   'use strict';
 
   var LIB = 'https://cdn.jsdelivr.net/npm/html-to-image@1.11.11/dist/html-to-image.js';
-  // gifenc의 main 필드는 CJS라 변환 서비스를 거치면 named export가 깨진다.
-  // ESM 빌드를 직접 가리킨다.
+  // gifenc의 main 필드는 CJS라 변환 서비스를 거치면 named export가 깨진다. ESM 빌드를 직접 가리킨다.
   var GIFENC = 'https://cdn.jsdelivr.net/npm/gifenc@1.0.3/dist/gifenc.esm.js';
+  // CORS 헤더를 붙여 이미지를 되돌려주는 공개 프록시. n=-1은 애니메이션 GIF 전체 유지.
+  var PROXY = 'https://images.weserv.nl/?n=-1&url=';
 
   var frame, statusEl;
   var gifencMod = null;
@@ -32,13 +36,8 @@
     if (!e) return '알 수 없는 오류';
     if (typeof e === 'string') return e;
     if (e.message) return e.message;
-    if (e.target && e.target.tagName) {
-      var src = e.target.src || e.target.href || '';
-      var kind = e.target.tagName.toLowerCase();
-      return kind + ' 로드 실패' + (src ? ' (' + src.slice(0, 60) + '…)' : '') +
-             ' — 콘솔(F12)에서 상세 확인';
-    }
-    if (e.type) return e.type + ' 이벤트 — 콘솔(F12)에서 상세 확인';
+    if (e.target && e.target.tagName) return e.target.tagName.toLowerCase() + ' 로드 실패 — 콘솔(F12) 확인';
+    if (e.type) return e.type + ' 이벤트 — 콘솔(F12) 확인';
     try { return JSON.stringify(e); } catch (_) { return String(e); }
   }
 
@@ -49,8 +48,6 @@
     });
   }
 
-  /* iframe 안에 html-to-image를 주입한다.
-     srcdoc은 입력할 때마다 새로 로드되므로 캡처 직전에 매번 확인한다. */
   function ensureLib() {
     var win = frame.contentWindow;
     var doc = frame.contentDocument;
@@ -66,7 +63,73 @@
     });
   }
 
-  /* 캡처 영역 계산: 뷰어에 보이는 폭 × (전체 내용 높이 또는 보이는 높이) */
+  /* ── 외부 이미지 인라인 ───────────────────────────── */
+
+  function blobToDataURL(blob) {
+    return new Promise(function (res, rej) {
+      var fr = new FileReader();
+      fr.onload = function () { res(fr.result); };
+      fr.onerror = function () { rej(new Error('이미지 변환 실패')); };
+      fr.readAsDataURL(blob);
+    });
+  }
+
+  /* 직접 fetch → 막히면 프록시. 둘 다 실패하면 원본을 남겨둔다. */
+  async function fetchAsDataURL(url) {
+    var res = null;
+    try {
+      res = await fetch(url, { mode: 'cors' });
+      if (!res.ok) res = null;
+    } catch (e) { res = null; }
+
+    if (!res) {
+      var allow = $('useProxy') ? $('useProxy').checked : true;
+      if (!allow) throw new Error('CORS 차단 (프록시 꺼짐)');
+      res = await fetch(PROXY + encodeURIComponent(url.replace(/^https?:\/\//, '')));
+      if (!res.ok) throw new Error('프록시 응답 ' + res.status);
+    }
+
+    var blob = await res.blob();
+    return { url: await blobToDataURL(blob), type: blob.type };
+  }
+
+  /* 캡처 직전에 외부 이미지를 data URL로 바꾸고, 되돌릴 목록을 반환한다. */
+  async function inlineImages(doc) {
+    var all = Array.prototype.slice.call(doc.querySelectorAll('img'));
+    var targets = all.filter(function (im) {
+      if (!im.src || im.src.indexOf('data:') === 0) return false;
+      try { return new URL(im.src, doc.baseURI).origin !== location.origin; }
+      catch (e) { return false; }
+    });
+
+    var restore = [];
+    var failed = 0;
+    var animated = 0;
+
+    for (var i = 0; i < targets.length; i++) {
+      var im = targets[i];
+      status('외부 이미지 처리 중… ' + (i + 1) + ' / ' + targets.length);
+      try {
+        var got = await fetchAsDataURL(im.src);
+        restore.push([im, im.src]);
+        im.src = got.url;
+        if (/gif/i.test(got.type)) animated++;
+        if (im.decode) { try { await im.decode(); } catch (e) {} }
+      } catch (e) {
+        failed++;
+        console.warn('[capture] 이미지 인라인 실패:', im.src, e);
+      }
+    }
+
+    return { restore: restore, failed: failed, total: targets.length, animated: animated };
+  }
+
+  function undoInline(restore) {
+    restore.forEach(function (pair) { pair[0].src = pair[1]; });
+  }
+
+  /* ── 캡처 영역 / 옵션 ─────────────────────────────── */
+
   function region() {
     var doc = frame.contentDocument;
     var root = doc.documentElement;
@@ -87,7 +150,7 @@
       height: r.h,
       pixelRatio: 1,
       backgroundColor: '#ffffff',
-      cacheBust: true,
+      cacheBust: false,   // 이미지는 이미 인라인했으므로 재요청할 이유가 없다
       skipFonts: $('embedFonts') ? !$('embedFonts').checked : false
     };
     for (var k in extra) o[k] = extra[k];
@@ -116,24 +179,35 @@
   }
 
   /* ── PNG ─────────────────────────────────────────── */
-  window.savePngImage = function () {
+  window.savePngImage = async function () {
     if (!ready()) return;
     busy(true);
-    status('캡처 중…');
+    status('준비 중…');
 
-    ensureLib()
-      .then(function () {
-        var r = region();
-        var ratio = parseInt($('captureScale') ? $('captureScale').value : 2, 10);
-        return frame.contentWindow.htmlToImage
-          .toPng(r.node, options(r, { pixelRatio: ratio }))
-          .then(function (url) {
-            download(url, 'viewer-' + stamp() + '.png');
-            status(r.w + '×' + r.h + ' @' + ratio + 'x 저장 완료');
-          });
-      })
-      .catch(function (e) { status('PNG 실패: ' + describe(e), 'warn'); })
-      .then(function () { busy(false); });
+    var doc = frame.contentDocument;
+    var inlined = null;
+
+    try {
+      await ensureLib();
+      inlined = await inlineImages(doc);
+
+      var r = region();
+      var ratio = parseInt($('captureScale') ? $('captureScale').value : 2, 10);
+      status('캡처 중… ' + r.w + '×' + r.h);
+
+      var url = await frame.contentWindow.htmlToImage.toPng(r.node, options(r, { pixelRatio: ratio }));
+      download(url, 'viewer-' + stamp() + '.png');
+
+      var note = inlined.failed
+        ? ' · 이미지 ' + inlined.failed + '/' + inlined.total + '개 실패'
+        : '';
+      status(r.w + '×' + r.h + ' @' + ratio + 'x 저장 완료' + note, inlined.failed ? 'warn' : '');
+    } catch (e) {
+      status('PNG 실패: ' + describe(e), 'warn');
+    } finally {
+      if (inlined) undoInline(inlined.restore);
+      busy(false);
+    }
   };
 
   /* ── GIF ─────────────────────────────────────────── */
@@ -161,17 +235,17 @@
     var win = frame.contentWindow;
     var doc = frame.contentDocument;
     var anims = [];
+    var inlined = null;
 
     try {
       await ensureLib();
 
       if (!gifencMod) {
         var mod = await import(GIFENC);
-        // 배포 형태에 따라 named export가 default 아래로 들어가는 경우가 있다
         gifencMod = typeof mod.GIFEncoder === 'function' ? mod : (mod.default || mod);
         if (typeof gifencMod.GIFEncoder !== 'function') {
           gifencMod = null;
-          throw new Error('GIF 인코더를 불러오지 못했습니다. 네트워크를 확인하세요.');
+          throw new Error('GIF 인코더를 불러오지 못했습니다.');
         }
       }
 
@@ -184,9 +258,14 @@
 
       var r = region();
       if (r.w * r.h > 4000000) {
-        status('영역이 너무 큽니다 (' + r.w + '×' + r.h + '). "전체 높이"를 끄고 다시 시도하세요.', 'warn');
+        status('영역이 너무 큽니다 (' + r.w + '×' + r.h + '). "전체 높이"를 끄세요.', 'warn');
         busy(false);
         return;
+      }
+
+      inlined = await inlineImages(doc);
+      if (inlined.animated) {
+        console.warn('[capture] 애니메이션 GIF ' + inlined.animated + '개는 첫 프레임으로 고정됩니다.');
       }
 
       var fps = parseInt($('gifFps').value, 10) || 15;
@@ -196,24 +275,15 @@
       var step = 1000 / fps;
       var count = Math.max(2, Math.round(total / step));
 
-      /* 폰트 CSS는 한 번만 만들어 모든 프레임에 재사용한다.
-         프레임마다 다시 받으면 느릴 뿐 아니라 한 번만 실패해도 전체가 터진다. */
+      /* 폰트 CSS는 한 번만 만들어 모든 프레임에 재사용한다. */
       var fontCSS = '';
       if (!options(r).skipFonts && typeof win.htmlToImage.getFontEmbedCSS === 'function') {
         status('폰트 준비 중…');
-        try {
-          fontCSS = await win.htmlToImage.getFontEmbedCSS(r.node);
-        } catch (e) {
-          console.warn('[capture] 폰트 임베드 실패, 시스템 폰트로 진행', e);
-        }
+        try { fontCSS = await win.htmlToImage.getFontEmbedCSS(r.node); }
+        catch (e) { console.warn('[capture] 폰트 임베드 실패, 시스템 폰트로 진행', e); }
       }
 
-      var frameOpts = options(r, {
-        pixelRatio: 1,
-        cacheBust: false,          // 매 프레임 재요청하면 로드 실패가 쉽게 난다
-        skipFonts: true,           // 아래 fontEmbedCSS로 대체
-        fontEmbedCSS: fontCSS
-      });
+      var frameOpts = options(r, { pixelRatio: 1, skipFonts: true, fontEmbedCSS: fontCSS });
 
       var enc = gifencMod.GIFEncoder();
       var buf = document.createElement('canvas');
@@ -245,23 +315,27 @@
           var data = ctx.getImageData(0, 0, r.w, r.h).data;
           var pal = gifencMod.quantize(data, 256);
           enc.writeFrame(gifencMod.applyPalette(data, pal), r.w, r.h, {
-            palette: pal,
-            delay: Math.round(step)
+            palette: pal, delay: Math.round(step)
           });
 
           status('프레임 ' + (i + 1) + ' / ' + count);
         }
 
         enc.finish();
-        var blob = new Blob([enc.bytes()], { type: 'image/gif' });
-        download(URL.createObjectURL(blob), 'viewer-' + stamp() + '.gif', true);
-        status(r.w + '×' + r.h + ' · ' + fps + 'fps · ' + count + '프레임 저장 완료');
+        download(URL.createObjectURL(new Blob([enc.bytes()], { type: 'image/gif' })),
+                 'viewer-' + stamp() + '.gif', true);
+
+        var note = inlined.animated
+          ? ' · GIF 이미지 ' + inlined.animated + '개는 정지 상태'
+          : '';
+        status(count + '프레임 저장 완료' + note, inlined.animated ? 'warn' : '');
       } finally {
         anims.forEach(function (a) { a.play(); });
       }
     } catch (e) {
       status('GIF 실패: ' + describe(e), 'warn');
     } finally {
+      if (inlined) undoInline(inlined.restore);
       busy(false);
     }
   };
